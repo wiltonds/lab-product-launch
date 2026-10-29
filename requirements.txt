@@ -1,0 +1,7 @@
+numpy
+pandas
+matplotlib
+jinja2
+jupyter
+# modo real:
+# basedosdados

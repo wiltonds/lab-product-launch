@@ -1,0 +1,207 @@
+<title>Quanto Custa Largar a CLT</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,400;7..72,600&family=Public+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: ferramenta em duas colunas (entradas | resultado) que vira uma coluna no celular; resultado começa pelo gatilho de saída */
+:root{
+  --paper:#f5f7f6; --card:#ffffff; --ink:#15211d; --muted:#5a6a64; --grid:#dde6e2;
+  --accent:#1d6b52; --accent-soft:#e2f0ea; --risk:#b4521b; --risk-soft:#f8e9df; --gold:#9a6b12; --gold-soft:#f6eedb;
+  --f-display:"Literata", Georgia, "Times New Roman", serif;
+  --f-body:"Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono:"JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --paper:#0f1513; --card:#151e1b; --ink:#e3ebe7; --muted:#95a59e; --grid:#24322d;
+  --accent:#55c497; --accent-soft:#183329; --risk:#ec8f57; --risk-soft:#3a2518; --gold:#e0b45a; --gold-soft:#352a14; color-scheme:dark; } }
+:root[data-theme="dark"]{
+  --paper:#0f1513; --card:#151e1b; --ink:#e3ebe7; --muted:#95a59e; --grid:#24322d;
+  --accent:#55c497; --accent-soft:#183329; --risk:#ec8f57; --risk-soft:#3a2518; --gold:#e0b45a; --gold-soft:#352a14; color-scheme:dark; }
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.55;margin:0}
+.wrap{max-width:1100px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:36px 64px;display:grid;gap:28px}
+h1,h2{font-family:var(--f-display);font-weight:600;text-wrap:balance;line-height:1.2;margin:0}
+h1{font-size:clamp(1.9rem,4.5vw,2.6rem)}
+h2{font-size:1.15rem}
+p{margin:0;max-width:68ch}
+.eyebrow{font-family:var(--f-mono);font-size:.74rem;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.lead{color:var(--muted);font-size:1.05rem}
+.grid{display:grid;grid-template-columns:minmax(0,380px) minmax(0,1fr);gap:24px;align-items:start}
+@media (max-width:860px){.grid{grid-template-columns:1fr}}
+.panel{background:var(--card);border:1px solid var(--grid);border-radius:8px;padding:18px;display:grid;gap:16px;min-width:0}
+fieldset{border:0;padding:0;margin:0;display:grid;gap:10px}
+legend{font-family:var(--f-mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.field{display:grid;grid-template-columns:1fr 130px;gap:10px;align-items:center}
+.field label{font-size:.88rem}
+.field label small{display:block;color:var(--muted);font-size:.76rem}
+.money{position:relative}
+.money span{position:absolute;left:8px;top:50%;transform:translateY(-50%);font-family:var(--f-mono);font-size:.8rem;color:var(--muted)}
+input{width:100%;font-family:var(--f-mono);font-size:.92rem;padding:7px 8px 7px 30px;border:1px solid var(--grid);border-radius:4px;background:var(--paper);color:var(--ink);text-align:right;font-variant-numeric:tabular-nums}
+input.pct{padding-left:8px}
+input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.out{display:grid;gap:22px;min-width:0}
+.verdict{border-radius:8px;padding:18px 20px;display:grid;gap:8px}
+.verdict.go{background:var(--accent-soft)} .verdict.wait{background:var(--gold-soft)}
+.verdict b{font-family:var(--f-display);font-size:1.35rem;font-weight:600}
+.checks{display:grid;gap:6px;margin:0;padding:0;list-style:none}
+.checks li{display:flex;gap:8px;align-items:baseline;font-size:.92rem}
+.checks li i{font-style:normal;font-family:var(--f-mono);font-size:.8rem;padding:1px 6px;border-radius:3px}
+.ok i{background:var(--accent);color:var(--card)} .no i{background:var(--gold);color:var(--card)}
+.goals{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.goal{border:1px solid var(--grid);border-radius:8px;padding:14px;display:grid;gap:4px;background:var(--card)}
+.goal span{font-size:.8rem;color:var(--muted)}
+.goal b{font-family:var(--f-mono);font-size:1.4rem;font-weight:500;font-variant-numeric:tabular-nums}
+.goal em{font-style:normal;font-size:.82rem;color:var(--muted)}
+.goal.min b{color:var(--accent)} .goal.clt b{color:var(--gold)}
+.track{display:grid;gap:8px}
+.bar{position:relative;height:30px;background:var(--paper);border:1px solid var(--grid);border-radius:4px;overflow:visible}
+.bar .fill{position:absolute;left:0;top:0;bottom:0;background:var(--accent);border-radius:3px 0 0 3px;transition:width .3s}
+.bar .mark{position:absolute;top:-6px;bottom:-6px;width:2px}
+.bar .mark.min{background:var(--accent)} .bar .mark.clt{background:var(--gold)}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:.8rem;color:var(--muted)}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;font-size:.9rem}
+th,td{padding:7px 10px;border-bottom:1px solid var(--grid);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left;white-space:normal}
+th{font-size:.78rem;color:var(--muted);font-weight:600}
+tr.total td{font-weight:600;border-top:1.5px solid var(--ink)}
+td.c{color:var(--muted);font-size:.82rem}
+.note{font-size:.8rem;color:var(--muted)}
+@media (prefers-reduced-motion:reduce){.bar .fill{transition:none}}
+</style>
+
+<div class="wrap">
+  <header style="display:grid;gap:12px">
+    <span class="eyebrow">Lab_Product_Launch · ferramenta</span>
+    <h1>Quanto custa largar a CLT</h1>
+    <p class="lead">O salário do contracheque não é tudo o que a CLT paga. Some 13º, férias, FGTS e benefícios e veja quanto o seu negócio precisa render para você sair com segurança, e quando isso deve acontecer.</p>
+  </header>
+
+  <div class="grid">
+    <form class="panel" id="f" aria-label="Seus números">
+      <fieldset>
+        <legend>Seu emprego hoje</legend>
+        <div class="field"><label for="bruto">Salário bruto<small>o valor do contrato</small></label><div class="money"><span>R$</span><input id="bruto" inputmode="decimal" value="4500"></div></div>
+        <div class="field"><label for="liq">Salário líquido<small>o que cai na conta</small></label><div class="money"><span>R$</span><input id="liq" inputmode="decimal" value="4050"></div></div>
+        <div class="field"><label for="vr">Vale-refeição e alimentação<small>valor mensal</small></label><div class="money"><span>R$</span><input id="vr" inputmode="decimal" value="600"></div></div>
+        <div class="field"><label for="outros">Outros benefícios<small>auxílios, bônus médio mensal</small></label><div class="money"><span>R$</span><input id="outros" inputmode="decimal" value="0"></div></div>
+      </fieldset>
+      <fieldset>
+        <legend>Sua vida sem a CLT</legend>
+        <div class="field"><label for="vida">Custo de vida da família<small>contas, moradia, mercado; sem plano e sem previdência</small></label><div class="money"><span>R$</span><input id="vida" inputmode="decimal" value="3200"></div></div>
+        <div class="field"><label for="plano">Plano de saúde por conta própria<small>mensal</small></label><div class="money"><span>R$</span><input id="plano" inputmode="decimal" value="600"></div></div>
+        <div class="field"><label for="prev">Previdência por conta própria<small>INSS do MEI/pró-labore ou privada</small></label><div class="money"><span>R$</span><input id="prev" inputmode="decimal" value="170"></div></div>
+      </fieldset>
+      <fieldset>
+        <legend>Seu negócio paralelo</legend>
+        <div class="field"><label for="margem">Quanto sobra do faturamento<small>depois de custos e impostos, em %</small></label><input id="margem" class="pct" inputmode="decimal" value="20"></div>
+        <div class="field"><label for="lucro">Lucro médio por mês hoje<small>últimos 3 meses; 0 se ainda não abriu</small></label><div class="money"><span>R$</span><input id="lucro" inputmode="decimal" value="1200"></div></div>
+        <div class="field"><label for="meses3">Meses seguidos acima da meta mínima</label><input id="meses3" class="pct" inputmode="numeric" value="0"></div>
+      </fieldset>
+      <fieldset>
+        <legend>Sua reserva</legend>
+        <div class="field"><label for="res">Reserva guardada hoje</label><div class="money"><span>R$</span><input id="res" inputmode="decimal" value="8000"></div></div>
+        <div class="field"><label for="pou">Quanto consegue guardar por mês</label><div class="money"><span>R$</span><input id="pou" inputmode="decimal" value="800"></div></div>
+        <div class="field"><label for="mres">Meses de reserva que quer ter</label><input id="mres" class="pct" inputmode="numeric" value="6"></div>
+      </fieldset>
+      <p class="note">Os valores iniciais são um exemplo. Troque pelos seus; nada sai do seu navegador.</p>
+    </form>
+
+    <div class="out" aria-live="polite">
+      <div class="verdict wait" id="verdict">
+        <b id="v-title">–</b>
+        <ul class="checks" id="v-checks"></ul>
+      </div>
+
+      <div class="goals">
+        <div class="goal min"><span>Meta mínima de lucro</span><b id="g-min">–</b><em id="g-min-f">–</em></div>
+        <div class="goal clt"><span>Meta para ficar igual à CLT</span><b id="g-clt">–</b><em id="g-clt-f">–</em></div>
+        <div class="goal"><span>Reserva antes de sair</span><b id="g-res">–</b><em id="g-res-t">–</em></div>
+      </div>
+
+      <div class="panel track">
+        <h2>Onde você está</h2>
+        <div class="bar" role="img" id="bar" aria-label="Lucro atual do negócio comparado às metas"><div class="fill" id="fill"></div><div class="mark min" id="mk-min"></div><div class="mark clt" id="mk-clt"></div></div>
+        <div class="legend"><span><i style="background:var(--accent)"></i>lucro atual: <b id="l-now">–</b></span><span><i style="background:var(--accent)"></i>| meta mínima</span><span><i style="background:var(--gold)"></i>| meta CLT</span></div>
+        <p id="progress-txt"></p>
+      </div>
+
+      <div class="panel">
+        <h2>O que a CLT paga de verdade, por mês</h2>
+        <div class="tbl"><table>
+          <thead><tr><th>Item</th><th>Como calcula</th><th>Por mês</th></tr></thead>
+          <tbody id="breakdown"></tbody>
+        </table></div>
+        <p class="note">13º e férias com um terço são distribuídos nos 12 meses (13,33 salários por ano ÷ 12). O cálculo usa o líquido como aproximação, porque o desconto real do 13º e das férias varia. O FGTS é 8% do bruto sobre os mesmos 13,33 salários: no negócio próprio, esse dinheiro precisa vir da sua sobra. Confirme os valores finais com um contador.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+  const num = id => { const v = parseFloat(String($(id).value).replace(/\./g,'').replace(',', '.')); return isFinite(v) ? v : 0; };
+  const brl = v => 'R$ ' + Math.round(v).toLocaleString('pt-BR');
+  const FATOR = (13 + 1/3) / 12; // 12 salários + 13º + 1/3 de férias
+
+  function calc(){
+    const bruto = num('bruto'), liq = num('liq'), vr = num('vr'), outros = num('outros');
+    const vida = num('vida'), plano = num('plano'), prev = num('prev');
+    const margem = num('margem') / 100, lucro = num('lucro'), meses3 = num('meses3');
+    const res = num('res'), pou = num('pou'), mres = num('mres');
+
+    const liqMes = liq * FATOR, fgts = 0.08 * bruto * FATOR;
+    const metaClt = liqMes + fgts + vr + outros + plano + prev;
+    const metaMin = vida + plano + prev;
+    const resAlvo = mres * metaMin;
+    const falta = Math.max(0, resAlvo - res);
+    const mesesRes = falta === 0 ? 0 : (pou > 0 ? Math.ceil(falta / pou) : Infinity);
+
+    $('g-min').textContent = brl(metaMin);
+    $('g-clt').textContent = brl(metaClt);
+    $('g-min-f').textContent = margem > 0 ? 'faturar ' + brl(metaMin / margem) + ' por mês' : 'informe quanto sobra do faturamento';
+    $('g-clt-f').textContent = margem > 0 ? 'faturar ' + brl(metaClt / margem) + ' por mês' : 'informe quanto sobra do faturamento';
+    $('g-res').textContent = brl(resAlvo);
+    $('g-res-t').textContent = falta === 0 ? 'meta de reserva atingida' : (isFinite(mesesRes) ? 'faltam ' + brl(falta) + ' · cerca de ' + mesesRes + (mesesRes === 1 ? ' mês' : ' meses') : 'faltam ' + brl(falta) + ' · sem poupança mensal');
+
+    const rows = [
+      ['Salário líquido', 'líquido × 13,33 ÷ 12', liqMes],
+      ['FGTS', '8% do bruto × 13,33 ÷ 12', fgts],
+      ['Vale-refeição e alimentação', 'valor mensal', vr],
+      ['Outros benefícios', 'valor mensal', outros],
+      ['Plano de saúde', 'o que você vai pagar sozinho', plano],
+      ['Previdência', 'o que você vai pagar sozinho', prev]
+    ];
+    $('breakdown').innerHTML = rows.map(r => '<tr><td>' + r[0] + '</td><td class="c">' + r[1] + '</td><td>' + brl(r[2]) + '</td></tr>').join('') +
+      '<tr class="total"><td>Meta para ficar igual à CLT</td><td class="c">lucro mensal do negócio</td><td>' + brl(metaClt) + '</td></tr>';
+
+    const top = Math.max(metaClt, lucro, metaMin) * 1.08 || 1;
+    $('fill').style.width = Math.min(100, lucro / top * 100) + '%';
+    $('mk-min').style.left = (metaMin / top * 100) + '%';
+    $('mk-clt').style.left = (metaClt / top * 100) + '%';
+    $('l-now').textContent = brl(lucro);
+    const pMin = metaMin > 0 ? lucro / metaMin : 0, pClt = metaClt > 0 ? lucro / metaClt : 0;
+    $('progress-txt').textContent = 'Seu negócio já cobre ' + Math.round(pMin * 100) + '% da meta mínima e ' + Math.round(pClt * 100) + '% do que a CLT paga. ' +
+      (lucro >= metaMin ? 'O lucro já paga as contas da família.' : 'Faltam ' + brl(metaMin - lucro) + ' de lucro por mês para pagar as contas.');
+    $('bar').setAttribute('aria-label', 'Lucro atual de ' + brl(lucro) + '; meta mínima de ' + brl(metaMin) + '; meta CLT de ' + brl(metaClt));
+
+    const c1 = lucro >= metaMin, c2 = meses3 >= 3, c3 = falta === 0;
+    const checks = [
+      [c1, 'Lucro do negócio cobre a meta mínima (' + brl(metaMin) + ')'],
+      [c2, 'Isso se repete há pelo menos 3 meses seguidos (hoje: ' + Math.max(0, Math.floor(meses3)) + ')'],
+      [c3, 'Reserva de ' + mres + ' meses guardada (' + brl(resAlvo) + ')']
+    ];
+    const go = c1 && c2 && c3;
+    $('verdict').className = 'verdict ' + (go ? 'go' : 'wait');
+    $('v-title').textContent = go ? 'Os números dizem que você pode sair com segurança.' :
+      (c1 ? 'Quase lá: o negócio já paga as contas.' : 'Ainda não. Siga construindo o negócio em paralelo.');
+    $('v-checks').innerHTML = checks.map(c => '<li class="' + (c[0] ? 'ok' : 'no') + '"><i>' + (c[0] ? 'ok' : 'falta') + '</i>' + c[1] + '</li>').join('');
+  }
+  $('f').addEventListener('input', calc);
+  $('f').addEventListener('submit', e => e.preventDefault());
+  calc();
+})();
+</script>
