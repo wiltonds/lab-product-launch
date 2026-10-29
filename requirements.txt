@@ -1,7 +1,6 @@
-numpy
-pandas
-matplotlib
-jinja2
-jupyter
-# modo real:
-# basedosdados
+numpy>=1.26
+pandas>=2.1
+pyarrow>=14
+streamlit>=1.48
+altair>=5
+requests>=2.31
