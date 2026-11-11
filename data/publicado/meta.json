@@ -1,0 +1,11 @@
+{
+  "uf": "AL",
+  "edicao": "2026-10",
+  "data_referencia": "2026-10-11",
+  "gerado_em": "2026-11-11",
+  "versao": "0.1.0",
+  "fontes": {
+    "cnpj": "Receita Federal, dados abertos do CNPJ (Estabelecimentos, Municípios, CNAEs)",
+    "populacao": "IBGE/SIDRA, tabela 6579 (população estimada)"
+  }
+}
