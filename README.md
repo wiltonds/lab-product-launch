@@ -63,9 +63,13 @@ uvicorn api.main:app --reload                     # http://localhost:8000/docs
 cd webapp && pnpm install && EXPO_PUBLIC_INSIGHTS_API_URL=http://localhost:8000 pnpm dev:metro
 ```
 
+### Atualizar os dados sem usar o seu computador
+
+O workflow `.github/workflows/atualizar-dados.yml` roda na nuvem do GitHub: baixa a base da Receita, recorta AL, gera `data/publicado/` e faz o commit sozinho. Roda todo dia 20 ou na hora, pela aba **Actions → Atualizar dados de Alagoas → Run workflow**. O relatório da auditoria fica anexado à execução.
+
 ### Publicar (Render, um clique)
 
-1. Rode os jobs de dados e faça commit de `data/publicado/`.
+1. Tenha `data/publicado/` no repositório (pelo workflow acima ou rodando os jobs).
 2. No render.com: **New → Blueprint → `wiltonds/lab-product-launch`**. O `render.yaml` cria os dois serviços:
    - `lab-dados-api` (Docker, plano gratuito);
    - `lab-do-meu-negocio` (site estático, já apontando para a API).
