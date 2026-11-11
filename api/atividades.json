@@ -1,0 +1,15 @@
+{
+  "_nota": "Mapeamento atividade do app -> CNAE principal (subclasse, 7 dígitos, sem pontuação). validado=false até conferência na tabela CNAE 2.3 do IBGE/CONCLA. Os ids precisam bater com shared/catalog.ts do app.",
+  "atividades": [
+    { "id": "lanchonete", "nome": "Lanchonete", "plural": "lanchonetes", "cnaes": ["5611203"], "validado": false },
+    { "id": "restaurante", "nome": "Restaurante pequeno", "plural": "restaurantes", "cnaes": ["5611201"], "validado": false },
+    { "id": "marmitaria", "nome": "Marmitaria", "plural": "marmitarias", "cnaes": ["5620104"], "validado": false },
+    { "id": "barbearia", "nome": "Barbearia", "plural": "barbearias e salões", "cnaes": ["9602501"], "validado": false,
+      "aviso": "O CNAE 9602-5/01 junta barbearias, salões, manicure e pedicure. A contagem inclui todos." },
+    { "id": "salao", "nome": "Salão de beleza", "plural": "salões e barbearias", "cnaes": ["9602501"], "validado": false,
+      "aviso": "O CNAE 9602-5/01 junta barbearias, salões, manicure e pedicure. A contagem inclui todos." },
+    { "id": "estetica", "nome": "Manicure e estética", "plural": "negócios de estética", "cnaes": ["9602502"], "validado": false },
+    { "id": "oficina", "nome": "Oficina mecânica", "plural": "oficinas mecânicas", "cnaes": ["4520001"], "validado": false },
+    { "id": "servicos-auto", "nome": "Lava-jato e serviços", "plural": "lava-jatos", "cnaes": ["4520005"], "validado": false }
+  ]
+}
