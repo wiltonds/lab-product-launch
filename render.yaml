@@ -16,16 +16,15 @@ services:
     name: lab-do-meu-negocio
     runtime: static
     rootDir: webapp
-    buildCommand: EXPO_PUBLIC_INSIGHTS_API_URL=https://$API_HOST pnpm exec expo export --platform web --output-dir dist --clear
+    buildCommand: pnpm exec expo export --platform web --output-dir dist --clear
     staticPublishPath: dist
     envVars:
       - key: NODE_VERSION
         value: "22"
-      - key: API_HOST
-        fromService:
-          type: web
-          name: lab-dados-api
-          property: host
+      # endereço PÚBLICO da API (ex.: https://lab-dados-api.onrender.com).
+      # O "host" do fromService é o endereço interno do Render e não funciona no navegador.
+      - key: EXPO_PUBLIC_INSIGHTS_API_URL
+        sync: false
     routes:
       - { type: rewrite, source: /onboarding, destination: /onboarding.html }
       - { type: rewrite, source: /simulator, destination: /simulator.html }
