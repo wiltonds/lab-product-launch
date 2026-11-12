@@ -48,6 +48,5 @@ export default function ProfileScreen() {
       <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}><Ionicons name={data.profile.marketingConsent ? "checkbox" : "square-outline"} size={20} color={palette.teal} /><Text onPress={() => void update({ profile: { ...data.profile, marketingConsent: !data.profile.marketingConsent } })} style={{ flex: 1, color: palette.ink, lineHeight: 20 }}>Quero receber conteúdo e ofertas (opcional)</Text></View>
     </Card>
     <Card><SectionTitle title="Privacidade e dados" subtitle="Veja solicitações, exporte seu planejamento ou solicite exclusão." /><Button title="Abrir privacidade" onPress={() => router.push("/privacy")} secondary /></Card>
-    <Card><SectionTitle title="Cobertura inicial" subtitle="Alagoas · nomes municipais consultados na fonte oficial do IBGE." /><Text style={{ color: palette.muted, fontSize: 13 }}>Análises locais de concorrência e sobrevivência ainda dependem de bases e métodos validados.</Text></Card>
   </Page></ScrollView>;
 }
