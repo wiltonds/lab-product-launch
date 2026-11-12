@@ -46,9 +46,12 @@ export const PLANNED_SIGNALS: { id: string; title: string; question: string; ico
 
 export const SMALL_SAMPLE_THRESHOLD = 30;
 
+/** Endereço público da API em produção. EXPO_PUBLIC_INSIGHTS_API_URL substitui (ex.: localhost no desenvolvimento). */
+export const DEFAULT_INSIGHTS_API_URL = "https://lab-dados-api.onrender.com";
+
 export function insightsApiUrl(): string | null {
-  const url = process.env.EXPO_PUBLIC_INSIGHTS_API_URL;
-  return url && url.trim() ? url.replace(/\/$/, "") : null;
+  const url = process.env.EXPO_PUBLIC_INSIGHTS_API_URL || DEFAULT_INSIGHTS_API_URL;
+  return url && url.trim() ? url.trim().replace(/\/$/, "") : null;
 }
 
 export async function fetchMunicipalInsights(municipalityCode: string, activityId: string, signal?: AbortSignal): Promise<InsightsState> {
