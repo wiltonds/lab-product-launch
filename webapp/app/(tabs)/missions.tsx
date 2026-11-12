@@ -24,9 +24,9 @@ export default function MissionsScreen() {
   return <ScrollView style={{ flex: 1, backgroundColor: palette.paper }}><Page>
     <Heading>Seu plano de ação</Heading>
     <Body>Cada passo troca um palpite por informação real. Sem pressa e sem contagem regressiva.</Body>
-    <View style={{ backgroundColor: palette.brand, borderRadius: 26, padding: 20, gap: 12 }}>
+    <View style={{ backgroundColor: palette.navy, borderRadius: 26, padding: 20, gap: 12 }}>
       <View style={{ flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between" }}>
-        <View><Text style={{ color: "#BFD8CE", fontSize: 13 }}>Concluído</Text><Text style={{ color: palette.white, fontSize: 34, fontWeight: "800", ...numStyle }}>{done}<Text style={{ fontSize: 18, color: "#BFD8CE" }}> de {MISSIONS.length}</Text></Text></View>
+        <View><Text style={{ color: "#AEB9CF", fontSize: 13 }}>Concluído</Text><Text style={{ color: palette.white, fontSize: 34, fontWeight: "800", ...numStyle }}>{done}<Text style={{ fontSize: 18, color: "#AEB9CF" }}> de {MISSIONS.length}</Text></Text></View>
         <Text style={{ color: palette.lime, fontSize: 26, fontWeight: "800", ...numStyle }}>{progress}%</Text>
       </View>
       <ProgressBar value={progress} color={palette.lime} track="rgba(255,255,255,0.15)" height={10} />

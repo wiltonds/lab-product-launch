@@ -2,7 +2,6 @@ import { useRouter } from "expo-router";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Body, Button, Card, Eyebrow, Heading, IconBadge, LinkButton, Page, ProgressBar, SectionTitle, Tag, palette, numStyle } from "@/components/lab-ui";
-import { BrandMark } from "@/components/brand-mark";
 import { useAppData } from "@/hooks/use-app-data";
 import { useAuth } from "@/hooks/use-auth";
 import { useMunicipalInsights } from "@/hooks/use-municipal-insights";
@@ -13,26 +12,50 @@ import { PLANNED_SIGNALS, SMALL_SAMPLE_THRESHOLD, type InsightSignal } from "@/s
 
 function Welcome() {
   const router = useRouter();
-  const points: { icon: keyof typeof Ionicons.glyphMap; title: string; text: string }[] = [
-    { icon: "flash-outline", title: "Resultado em 1 minuto", text: "Seis perguntas rápidas, sem cadastro." },
-    { icon: "calculator-outline", title: "Quanto precisa vender", text: "Clientes por dia para pagar as contas e a sua retirada." },
-    { icon: "map-outline", title: "Dados da sua cidade", text: "Concorrência e sobrevivência de negócios parecidos." },
+  const steps: { icon: keyof typeof Ionicons.glyphMap; color: [string, string]; title: string; text: string }[] = [
+    { icon: "chatbubble-ellipses-outline", color: ["#FFE6DA", "#E2531A"], title: "Conte sua ideia", text: "Negócio, cidade e quanto você tem. Leva 2 minutos." },
+    { icon: "stats-chart-outline", color: ["#E3ECFF", "#2F62D9"], title: "Veja os números", text: "Quantos clientes por dia você precisa e o que os dados da cidade dizem." },
+    { icon: "flag-outline", color: ["#FFF1C7", "#B07A00"], title: "Siga o plano", text: "Passos práticos para testar a ideia antes de gastar." },
   ];
-  return <ScrollView style={{ flex: 1, backgroundColor: palette.paper }}><Page style={{ paddingTop: 22 }}>
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}><View style={{ borderRadius: 10, overflow: "hidden" }}><BrandMark size={34} /></View><Text style={{ color: palette.ink, fontWeight: "800", fontSize: 16 }}>Lab do Meu Negócio</Text></View>
-    <View style={{ backgroundColor: palette.brand, borderRadius: 32, padding: 26, gap: 16, overflow: "hidden" }}>
-      <View style={{ position: "absolute", right: -40, top: -40, width: 180, height: 180, borderRadius: 90, backgroundColor: "rgba(212,244,106,0.16)" }} />
-      <Tag tone="dark">PARA QUEM VAI ABRIR O PRIMEIRO NEGÓCIO</Tag>
-      <Heading color={palette.white} size={34}>Antes de investir, entenda o seu negócio.</Heading>
-      <Body color="#CFE3DB" size={16}>Descubra o que os dados dizem sobre sua ideia, seu dinheiro e o mercado onde pretende empreender.</Body>
-      <Pressable accessibilityRole="button" onPress={() => router.push("/onboarding")} style={({ pressed }) => ({ backgroundColor: palette.lime, borderRadius: 999, minHeight: 56, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8, opacity: pressed ? 0.9 : 1 })}>
-        <Text style={{ color: palette.brandDeep, fontWeight: "800", fontSize: 16 }}>Começar minha análise</Text><Ionicons name="arrow-forward" size={18} color={palette.brandDeep} />
+  const bubbles: { icon: keyof typeof Ionicons.glyphMap; bg: string }[] = [
+    { icon: "cut", bg: "#FF6B2C" }, { icon: "fast-food", bg: "#FFC93C" }, { icon: "construct", bg: "#3D7BFF" }, { icon: "sparkles", bg: "#13A35A" },
+  ];
+  return <ScrollView style={{ flex: 1, backgroundColor: palette.paper }}><Page style={{ paddingTop: 18 }}>
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+      <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: palette.brand, alignItems: "center", justifyContent: "center" }}><Ionicons name="flask" size={19} color={palette.white} /></View>
+      <Text style={{ color: palette.ink, fontWeight: "800", fontSize: 16, flex: 1 }}>Lab do Meu Negócio</Text>
+      <Pressable onPress={() => router.push("/cadastro?modo=entrar")} style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, borderWidth: 1.5, borderColor: palette.line, backgroundColor: palette.white }}>
+        <Text style={{ color: palette.ink, fontWeight: "700", fontSize: 14 }}>Entrar</Text>
       </Pressable>
-      <Pressable onPress={() => router.push("/(tabs)/profile")} style={{ alignItems: "center", paddingVertical: 4 }}><Text style={{ color: palette.white, fontWeight: "700" }}>Já tenho uma conta</Text></Pressable>
     </View>
-    {points.map((p) => <View key={p.title} style={{ flexDirection: "row", gap: 14, alignItems: "center", paddingHorizontal: 4 }}>
-      <IconBadge icon={p.icon} /><View style={{ flex: 1 }}><Text style={{ color: palette.ink, fontWeight: "800", fontSize: 15 }}>{p.title}</Text><Body size={14}>{p.text}</Body></View>
+
+    <View style={{ backgroundColor: palette.navy, borderRadius: 32, padding: 24, gap: 18, overflow: "hidden" }}>
+      <View style={{ position: "absolute", right: -60, top: -60, width: 220, height: 220, borderRadius: 110, backgroundColor: "rgba(61,123,255,0.28)" }} />
+      <View style={{ position: "absolute", right: 40, bottom: -70, width: 140, height: 140, borderRadius: 70, backgroundColor: "rgba(255,201,60,0.18)" }} />
+      <View style={{ flexDirection: "row" }}>
+        {bubbles.map((b, i) => <View key={b.icon} style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: b.bg, alignItems: "center", justifyContent: "center", marginLeft: i ? -10 : 0, borderWidth: 3, borderColor: palette.navy }}>
+          <Ionicons name={b.icon} size={22} color={palette.white} />
+        </View>)}
+      </View>
+      <Heading color={palette.white} size={33}>Descubra se o seu negócio tem chance <Text style={{ color: palette.lime }}>antes de investir.</Text></Heading>
+      <Body color="#C9D2E3" size={16}>Números da sua ideia + dados reais da sua cidade. De graça, sem planilha e sem enrolação.</Body>
+      <Pressable accessibilityRole="button" onPress={() => router.push("/onboarding")} style={({ pressed }) => ({ backgroundColor: palette.brand, borderRadius: 999, minHeight: 58, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8, transform: [{ scale: pressed ? 0.98 : 1 }] })}>
+        <Text style={{ color: palette.white, fontWeight: "800", fontSize: 17 }}>Começar minha análise</Text><Ionicons name="arrow-forward" size={19} color={palette.white} />
+      </Pressable>
+      <Text style={{ color: "#AEB9CF", fontSize: 13, textAlign: "center" }}>Grátis · 2 minutos · sem cadastro para começar</Text>
+    </View>
+
+    <Text style={{ color: palette.ink, fontWeight: "800", fontSize: 20, marginTop: 6 }}>Como funciona</Text>
+    {steps.map((st, i) => <View key={st.title} style={{ flexDirection: "row", gap: 14, alignItems: "center", backgroundColor: palette.white, borderRadius: 22, padding: 16 }}>
+      <View style={{ width: 50, height: 50, borderRadius: 17, backgroundColor: st.color[0], alignItems: "center", justifyContent: "center" }}><Ionicons name={st.icon} size={24} color={st.color[1]} /></View>
+      <View style={{ flex: 1, gap: 2 }}><Text style={{ color: palette.ink, fontWeight: "800", fontSize: 16 }}>{i + 1}. {st.title}</Text><Body size={14}>{st.text}</Body></View>
     </View>)}
+
+    <View style={{ backgroundColor: palette.lime, borderRadius: 22, padding: 18, gap: 10 }}>
+      <Text style={{ color: palette.navy, fontWeight: "800", fontSize: 16 }}>Dados oficiais, não achismo</Text>
+      {[["business-outline", "Cadastro de empresas da Receita Federal"], ["people-outline", "População do IBGE"], ["map-outline", "Os 102 municípios de Alagoas"]].map(([ic, t]) =>
+        <View key={t} style={{ flexDirection: "row", gap: 10, alignItems: "center" }}><Ionicons name={ic as any} size={18} color={palette.navy} /><Text style={{ color: palette.navy, fontSize: 15 }}>{t}</Text></View>)}
+    </View>
     <Text style={{ color: palette.faint, fontSize: 12, textAlign: "center", lineHeight: 18 }}>A análise organiza premissas e riscos. Ela não garante sucesso.</Text>
   </Page></ScrollView>;
 }
@@ -85,17 +108,17 @@ export default function HomeScreen() {
     </View>
 
     {/* Resultado principal */}
-    <View style={{ backgroundColor: palette.brand, borderRadius: 30, padding: 22, gap: 16, overflow: "hidden" }}>
-      <View style={{ position: "absolute", right: -50, bottom: -60, width: 200, height: 200, borderRadius: 100, backgroundColor: "rgba(212,244,106,0.12)" }} />
+    <View style={{ backgroundColor: palette.navy, borderRadius: 30, padding: 22, gap: 16, overflow: "hidden" }}>
+      <View style={{ position: "absolute", right: -50, bottom: -60, width: 200, height: 200, borderRadius: 100, backgroundColor: "rgba(61,123,255,0.22)" }} />
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
         <View style={{ width: 44, height: 44, borderRadius: 15, backgroundColor: palette.lime, alignItems: "center", justifyContent: "center" }}><Ionicons name={activityIcon(data.idea.activity) as any} size={22} color={palette.brandDeep} /></View>
-        <View style={{ flex: 1 }}><Text style={{ color: palette.white, fontWeight: "800", fontSize: 17 }}>{data.idea.activity}</Text><Text style={{ color: "#BFD8CE", fontSize: 14 }}>{place}</Text></View>
+        <View style={{ flex: 1 }}><Text style={{ color: palette.white, fontWeight: "800", fontSize: 17 }}>{data.idea.activity}</Text><Text style={{ color: "#AEB9CF", fontSize: 14 }}>{place}</Text></View>
         <Tag tone="dark">SIMULAÇÃO</Tag>
       </View>
       <View style={{ gap: 2 }}>
-        <Text style={{ color: "#BFD8CE", fontSize: 14 }}>Sobra por mês, depois de pagar tudo e a sua retirada</Text>
+        <Text style={{ color: "#AEB9CF", fontSize: 14 }}>Sobra por mês, depois de pagar tudo e a sua retirada</Text>
         <Text style={{ color: positive ? palette.lime : "#FFB4A8", fontSize: 44, fontWeight: "800", letterSpacing: -1.5, ...numStyle }}>{formatMoney(r.operatingResult)}</Text>
-        <Text style={{ color: "#CFE3DB", fontSize: 14, ...numStyle }}>{formatMoney(r.revenue)} em vendas · {f.customersPerDay} clientes/dia a {formatMoney(f.averageTicket)}</Text>
+        <Text style={{ color: "#C9D2E3", fontSize: 14, ...numStyle }}>{formatMoney(r.revenue)} em vendas · {f.customersPerDay} clientes/dia a {formatMoney(f.averageTicket)}</Text>
       </View>
       <Pressable onPress={() => router.push("/(tabs)/simulator")} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: "rgba(255,255,255,0.1)", borderRadius: 16, paddingHorizontal: 16, paddingVertical: 13 }}>
         <Text style={{ color: palette.white, fontWeight: "700" }}>Mexer nos números</Text><Ionicons name="options-outline" size={18} color={palette.white} />
@@ -174,10 +197,17 @@ export default function HomeScreen() {
       </View>
     </Card>
 
+    {/* Conta */}
+    {!data.profile.verified ? <Pressable onPress={() => router.push("/cadastro")} style={{ backgroundColor: palette.brand, borderRadius: 26, padding: 20, flexDirection: "row", alignItems: "center", gap: 14 }}>
+      <View style={{ width: 46, height: 46, borderRadius: 16, backgroundColor: "rgba(255,255,255,0.2)", alignItems: "center", justifyContent: "center" }}><Ionicons name="bookmark-outline" size={22} color={palette.white} /></View>
+      <View style={{ flex: 1, gap: 2 }}><Text style={{ color: palette.white, fontWeight: "800", fontSize: 16 }}>Salve sua análise</Text><Text style={{ color: "#FFE3D6", fontSize: 13 }}>Crie sua conta grátis e acesse de qualquer aparelho</Text></View>
+      <Ionicons name="arrow-forward" size={20} color={palette.white} />
+    </Pressable> : null}
+
     {/* Oferta */}
     <Pressable onPress={() => router.push("/report")} style={{ backgroundColor: palette.ink, borderRadius: 26, padding: 20, flexDirection: "row", alignItems: "center", gap: 14 }}>
       <View style={{ width: 46, height: 46, borderRadius: 16, backgroundColor: palette.lime, alignItems: "center", justifyContent: "center" }}><Ionicons name="document-text-outline" size={22} color={palette.brandDeep} /></View>
-      <View style={{ flex: 1, gap: 2 }}><Text style={{ color: palette.white, fontWeight: "800", fontSize: 16 }}>Relatório completo + mentoria</Text><Text style={{ color: "#A9B8B2", fontSize: 13 }}>Plano de decisão com um especialista ao seu lado</Text></View>
+      <View style={{ flex: 1, gap: 2 }}><Text style={{ color: palette.white, fontWeight: "800", fontSize: 16 }}>Relatório completo + mentoria</Text><Text style={{ color: "#AEB9CF", fontSize: 13 }}>Plano de decisão com um especialista ao seu lado</Text></View>
       <Ionicons name="arrow-forward" size={20} color={palette.lime} />
     </Pressable>
 

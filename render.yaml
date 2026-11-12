@@ -34,3 +34,4 @@ services:
       - { type: rewrite, source: /mentorship, destination: /mentorship.html }
       - { type: rewrite, source: /privacy, destination: /privacy.html }
       - { type: rewrite, source: /sales-test, destination: /sales-test.html }
+      - { type: rewrite, source: /cadastro, destination: /cadastro.html }

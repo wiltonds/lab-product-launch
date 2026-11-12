@@ -4,21 +4,28 @@ import { Ionicons } from "@expo/vector-icons";
 
 /**
  * Design system do Lab do Meu Negócio.
- * Referências: clareza financeira (um número forte por bloco), resultado antes de cadastro,
+ * Direção "Energia": laranja (ação), azul-marinho (confiança), amarelo (destaque). Um número forte por bloco,
  * prós e contras do local, faixa de comparação ao lado de cada número.
  */
 export const palette = {
-  // marca
-  brand: "#0E5A47", brandDeep: "#093F32", brandSoft: "#E4F1EC", lime: "#D4F46A",
+  // marca: energia (laranja) + confiança (azul-marinho) + destaque (amarelo)
+  brand: "#FF6B2C", brandDeep: "#14213D", brandSoft: "#FFF0E8", lime: "#FFC93C",
+  navy: "#14213D", navySoft: "#E8ECF5", sky: "#3D7BFF", skySoft: "#E9F0FF",
   // texto e superfícies
-  ink: "#10231C", navy: "#10231C", muted: "#64746E", faint: "#9AA7A1",
-  paper: "#F5F2EC", white: "#FFFFFF", line: "#E9E4DA",
+  ink: "#14213D", muted: "#5B6478", faint: "#9AA1B2",
+  paper: "#F6F7FB", white: "#FFFFFF", line: "#E4E7EF",
   // estados
-  green: "#13795B", greenSoft: "#E3F4EC", amber: "#B66A0B", amberSoft: "#FCEFD8",
-  red: "#B93A2F", redSoft: "#FBE6E3",
+  green: "#12A150", greenSoft: "#E3F7EC", amber: "#C77700", amberSoft: "#FFF4D6",
+  red: "#E5484D", redSoft: "#FDECEC",
   // compatibilidade com telas antigas
-  teal: "#0E5A47", tealSoft: "#E4F1EC",
+  teal: "#FF6B2C", tealSoft: "#FFF0E8",
 };
+
+/** Cores dos ícones de negócio (fundo, ícone). */
+export const TILE_COLORS: [string, string][] = [
+  ["#FFE6DA", "#E2531A"], ["#FFF1C7", "#B07A00"], ["#E3ECFF", "#2F62D9"], ["#E2F6EA", "#13864A"],
+  ["#F3E8FF", "#7A3BD1"], ["#FFE3EC", "#C9305E"], ["#E0F5F7", "#0F8090"], ["#FFEFD9", "#C25E00"],
+];
 
 const num = { fontVariant: ["tabular-nums" as const] };
 const shadow = Platform.select({
@@ -51,15 +58,16 @@ export function Field({ label, value, onChangeText, placeholder, keyboardType = 
 
 export function Choice({ label, selected, onPress, detail }: { label: string; selected: boolean; onPress: () => void; detail?: string }) {
   return <Pressable accessibilityRole="button" accessibilityState={{ selected }} onPress={onPress} style={({ pressed }) => [styles.choice, selected && styles.choiceSelected, pressed && { opacity: 0.9 }]}>
-    <View style={{ flex: 1, gap: 2 }}><Text style={[styles.choiceText, selected && { color: palette.brandDeep }]}>{label}</Text>{detail ? <Text style={styles.helper}>{detail}</Text> : null}</View>
+    <View style={{ flex: 1, gap: 2 }}><Text style={[styles.choiceText, selected && { color: palette.brandDeep, fontWeight: "700" }]}>{label}</Text>{detail ? <Text style={styles.helper}>{detail}</Text> : null}</View>
     <View style={[styles.check, selected && styles.checkOn]}>{selected ? <Ionicons name="checkmark" size={14} color={palette.white} /> : null}</View>
   </Pressable>;
 }
 
 /** Cartão grande com ícone, para escolhas visuais (tipo de negócio). */
-export function OptionTile({ label, icon, selected, onPress }: { label: string; icon: keyof typeof Ionicons.glyphMap; selected: boolean; onPress: () => void }) {
+export function OptionTile({ label, icon, selected, onPress, color = 0 }: { label: string; icon: keyof typeof Ionicons.glyphMap; selected: boolean; onPress: () => void; color?: number }) {
+  const [bg, fg] = TILE_COLORS[color % TILE_COLORS.length];
   return <Pressable accessibilityRole="button" accessibilityState={{ selected }} onPress={onPress} style={({ pressed }) => [styles.tile, selected && styles.tileOn, pressed && { transform: [{ scale: 0.97 }] }]}>
-    <View style={[styles.tileIcon, selected && { backgroundColor: palette.lime }]}><Ionicons name={icon} size={24} color={palette.brandDeep} /></View>
+    <View style={[styles.tileIcon, { backgroundColor: selected ? palette.white : bg }]}><Ionicons name={icon} size={26} color={fg} /></View>
     <Text style={[styles.tileText, selected && { color: palette.white }]} numberOfLines={2}>{label}</Text>
   </Pressable>;
 }
@@ -75,7 +83,7 @@ export function Segmented<T extends string>({ options, value, onChange, dark = f
     {options.map((o) => {
       const on = o.id === value;
       return <Pressable key={o.id} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => onChange(o.id)} style={[styles.segmentItem, on && { backgroundColor: dark ? palette.lime : palette.white }]}>
-        <Text style={{ fontSize: 13, fontWeight: "700", color: on ? palette.brandDeep : dark ? "#CFE3DB" : palette.muted }}>{o.label}</Text>
+        <Text style={{ fontSize: 13, fontWeight: "700", color: on ? palette.brandDeep : dark ? "#C9D2E3" : palette.muted }}>{o.label}</Text>
       </Pressable>;
     })}
   </View>;
@@ -90,11 +98,11 @@ export function Stepper({ label, value, onChange, step, format, min = 0, max, hi
   return <View style={styles.stepRow}>
     <View style={{ flex: 1, gap: 2 }}><Text style={styles.stepLabel}>{label}</Text>{hint ? <Text style={styles.helper}>{hint}</Text> : null}</View>
     <View style={styles.stepCtl}>
-      <Pressable accessibilityLabel={`Diminuir ${label}`} onPress={() => onChange(clamp(value - step))} style={styles.stepBtn} hitSlop={6}><Ionicons name="remove" size={18} color={palette.brandDeep} /></Pressable>
+      <Pressable accessibilityLabel={`Diminuir ${label}`} onPress={() => onChange(clamp(value - step))} style={styles.stepBtn} hitSlop={6}><Ionicons name="remove" size={18} color={palette.brand} /></Pressable>
       {editing
         ? <TextInput autoFocus value={draft} onChangeText={setDraft} onBlur={commit} onSubmitEditing={commit} keyboardType="decimal-pad" style={[styles.stepValue, styles.stepInput]} />
         : <Pressable accessibilityLabel={`Editar ${label}`} onPress={() => { setDraft(String(value)); setEditing(true); }}><Text style={styles.stepValue}>{format(value)}</Text></Pressable>}
-      <Pressable accessibilityLabel={`Aumentar ${label}`} onPress={() => onChange(clamp(value + step))} style={styles.stepBtn} hitSlop={6}><Ionicons name="add" size={18} color={palette.brandDeep} /></Pressable>
+      <Pressable accessibilityLabel={`Aumentar ${label}`} onPress={() => onChange(clamp(value + step))} style={styles.stepBtn} hitSlop={6}><Ionicons name="add" size={18} color={palette.brand} /></Pressable>
     </View>
   </View>;
 }
@@ -104,7 +112,7 @@ export function ProgressBar({ value, color = palette.brand, track = "#ECE7DD", h
 }
 
 export function Tag({ children, tone = "neutral" }: PropsWithChildren<{ tone?: "neutral" | "positive" | "attention" | "risk" | "dark" }>) {
-  const [bg, fg] = { neutral: [palette.brandSoft, palette.brand], positive: [palette.greenSoft, palette.green], attention: [palette.amberSoft, palette.amber], risk: [palette.redSoft, palette.red], dark: ["rgba(255,255,255,0.14)", "#E6F2EC"] }[tone];
+  const [bg, fg] = { neutral: [palette.brandSoft, palette.brand], positive: [palette.greenSoft, palette.green], attention: [palette.amberSoft, palette.amber], risk: [palette.redSoft, palette.red], dark: ["rgba(255,255,255,0.14)", "#E8ECF5"] }[tone];
   return <View style={[styles.tag, { backgroundColor: bg }]}><Text style={[styles.tagText, { color: fg }]}>{children}</Text></View>;
 }
 
@@ -135,9 +143,9 @@ const styles = StyleSheet.create({
   check: { width: 24, height: 24, borderRadius: 12, borderWidth: 1.5, borderColor: "#CBC4B6", alignItems: "center", justifyContent: "center" },
   checkOn: { backgroundColor: palette.brand, borderColor: palette.brand },
   choiceText: { color: palette.ink, fontSize: 16, fontWeight: "600" },
-  tile: { flexBasis: "47%", flexGrow: 1, maxWidth: "48.6%", minHeight: 116, borderRadius: 22, backgroundColor: palette.white, padding: 16, justifyContent: "space-between", gap: 12, borderWidth: 1.5, borderColor: "transparent", ...shadow },
+  tile: { flexBasis: "47%", flexGrow: 1, maxWidth: "48.6%", minHeight: 112, borderRadius: 22, backgroundColor: palette.white, padding: 16, justifyContent: "space-between", gap: 12, borderWidth: 2, borderColor: "transparent", ...shadow },
   tileOn: { backgroundColor: palette.brand, borderColor: palette.brand },
-  tileIcon: { width: 44, height: 44, borderRadius: 14, backgroundColor: palette.brandSoft, alignItems: "center", justifyContent: "center" },
+  tileIcon: { width: 48, height: 48, borderRadius: 16, alignItems: "center", justifyContent: "center" },
   tileText: { color: palette.ink, fontSize: 15, fontWeight: "700", lineHeight: 19 },
   chip: { paddingHorizontal: 16, paddingVertical: 12, borderRadius: 999, backgroundColor: palette.white, borderWidth: 1.5, borderColor: palette.line },
   chipOn: { backgroundColor: palette.brand, borderColor: palette.brand },

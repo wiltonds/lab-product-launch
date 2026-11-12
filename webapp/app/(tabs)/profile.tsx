@@ -5,7 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Button, Card, Eyebrow, Field, Heading, Page, SectionTitle, palette } from "@/components/lab-ui";
 import { useAppData } from "@/hooks/use-app-data";
 import { useAuth } from "@/hooks/use-auth";
-import { startOAuthLogin } from "@/constants/oauth";
+import { signOut } from "@/shared/supabase";
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -13,10 +13,6 @@ export default function ProfileScreen() {
   const { user, isAuthenticated, logout } = useAuth();
   const [notice, setNotice] = useState("");
   const updateProfile = (key: keyof typeof data.profile, value: string) => void update({ profile: { ...data.profile, [key]: value } });
-  const login = async () => {
-    try { await startOAuthLogin(); }
-    catch { Alert.alert("Login indisponível", "A configuração de login Manus não está disponível nesta execução."); }
-  };
   const finishImport = async () => {
     try {
       const imported = await importGuestDraft();
@@ -38,14 +34,14 @@ export default function ProfileScreen() {
   };
   return <ScrollView style={{ flex: 1, backgroundColor: palette.paper }}><Page>
     <Eyebrow>PERFIL</Eyebrow><Heading>Seus dados, sob seu controle.</Heading>
-    <Card><SectionTitle title={isAuthenticated ? "Conta conectada" : "Entre para sincronizar"} subtitle={isAuthenticated ? (user?.email || "Sessão Manus ativa") : "Este app usa login Manus real. Não há verificação falsa por WhatsApp ou senha local."} />
-      {!isAuthenticated ? <Button title="Entrar com Manus" onPress={() => void login()} /> : <Button title="Sair da conta" secondary onPress={() => void logout()} />}
-      {!isAuthenticated ? <Text style={{ color: palette.muted, fontSize: 13, lineHeight: 19 }}>Rascunhos de convidado ficam isolados neste aparelho; não são copiados automaticamente para nenhuma conta. O WhatsApp é um dado de perfil e não é verificado nesta versão.</Text> : null}
-      {isAuthenticated ? <><Text style={{ color: palette.muted, fontSize: 13, lineHeight: 19 }}>Os dados locais desta conta são separados dos rascunhos de convidado e de outras contas.</Text><Button title="Importar rascunho deste aparelho" secondary onPress={requestImport} />{notice ? <Text style={{ color: palette.teal, fontSize: 13 }}>{notice}</Text> : null}</> : null}
+    <Card><SectionTitle title={data.profile.verified ? "Conta confirmada" : "Crie sua conta grátis"} subtitle={data.profile.verified ? data.profile.email : "Salve sua análise e acesse de qualquer aparelho. Sem senha: você entra com um código no e-mail."} />
+      {data.profile.verified
+        ? <Button title="Sair da conta" secondary onPress={() => void (async () => { await signOut(); await update({ profile: { ...data.profile, verified: false } }); })()} />
+        : <><Button title="Criar conta" onPress={() => router.push("/cadastro")} /><Button title="Já tenho conta" secondary onPress={() => router.push("/cadastro?modo=entrar")} /></>}
     </Card>
     <Card><SectionTitle title="Sobre você" subtitle="Dados usados no seu próprio planejamento." />
       <Field label="Nome" value={data.profile.name} onChangeText={(v) => updateProfile("name", v)} placeholder={user?.name || "Seu nome"} />
-      <Field label="WhatsApp" value={data.profile.whatsapp} onChangeText={(v) => updateProfile("whatsapp", v)} placeholder="(82) 9 0000-0000" keyboardType="phone-pad" helper="Não validamos nem enviamos mensagens sem integração conectada." />
+      <Field label="WhatsApp" value={data.profile.whatsapp} onChangeText={(v) => updateProfile("whatsapp", v)} placeholder="(82) 9 0000-0000" keyboardType="phone-pad" helper="Usado só para falar com você sobre a sua análise." />
       <Field label="E-mail" value={data.profile.email || user?.email || ""} onChangeText={(v) => updateProfile("email", v)} placeholder="voce@exemplo.com" keyboardType="email-address" />
       <Field label="Cidade onde mora" value={data.profile.homeCity} onChangeText={(v) => updateProfile("homeCity", v)} placeholder="Município" />
       <Text style={{ color: palette.muted, fontSize: 13 }}>Aceite dos termos e política: {data.profile.termsAccepted ? "registrado" : "ainda não registrado"}</Text>
