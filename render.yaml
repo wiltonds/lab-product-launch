@@ -16,9 +16,11 @@ services:
     name: lab-do-meu-negocio
     runtime: static
     rootDir: webapp
-    buildCommand: corepack enable && pnpm install --frozen-lockfile && EXPO_PUBLIC_INSIGHTS_API_URL=https://$API_HOST npx expo export --platform web --output-dir dist --clear
+    buildCommand: EXPO_PUBLIC_INSIGHTS_API_URL=https://$API_HOST pnpm exec expo export --platform web --output-dir dist --clear
     staticPublishPath: dist
     envVars:
+      - key: NODE_VERSION
+        value: "22"
       - key: API_HOST
         fromService:
           type: web
