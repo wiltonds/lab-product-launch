@@ -30,7 +30,7 @@ function Welcome() {
     </View>
 
     <View style={{ backgroundColor: palette.navy, borderRadius: 32, padding: 24, gap: 18, overflow: "hidden" }}>
-      <View style={{ position: "absolute", right: -60, top: -60, width: 220, height: 220, borderRadius: 110, backgroundColor: "rgba(255,107,44,0.25)" }} />
+      <View style={{ position: "absolute", right: -60, top: -60, width: 220, height: 220, borderRadius: 110, backgroundColor: "rgba(61,123,255,0.28)" }} />
       <View style={{ position: "absolute", right: 40, bottom: -70, width: 140, height: 140, borderRadius: 70, backgroundColor: "rgba(255,201,60,0.18)" }} />
       <View style={{ flexDirection: "row" }}>
         {bubbles.map((b, i) => <View key={b.icon} style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: b.bg, alignItems: "center", justifyContent: "center", marginLeft: i ? -10 : 0, borderWidth: 3, borderColor: palette.navy }}>
@@ -109,7 +109,7 @@ export default function HomeScreen() {
 
     {/* Resultado principal */}
     <View style={{ backgroundColor: palette.navy, borderRadius: 30, padding: 22, gap: 16, overflow: "hidden" }}>
-      <View style={{ position: "absolute", right: -50, bottom: -60, width: 200, height: 200, borderRadius: 100, backgroundColor: "rgba(255,107,44,0.18)" }} />
+      <View style={{ position: "absolute", right: -50, bottom: -60, width: 200, height: 200, borderRadius: 100, backgroundColor: "rgba(61,123,255,0.22)" }} />
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
         <View style={{ width: 44, height: 44, borderRadius: 15, backgroundColor: palette.lime, alignItems: "center", justifyContent: "center" }}><Ionicons name={activityIcon(data.idea.activity) as any} size={22} color={palette.brandDeep} /></View>
         <View style={{ flex: 1 }}><Text style={{ color: palette.white, fontWeight: "800", fontSize: 17 }}>{data.idea.activity}</Text><Text style={{ color: "#AEB9CF", fontSize: 14 }}>{place}</Text></View>
