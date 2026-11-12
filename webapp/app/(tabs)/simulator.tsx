@@ -48,22 +48,22 @@ export default function SimulatorScreen() {
   const total = Math.max(r.revenue, r.fixedCosts + r.variableCosts, 1);
   const parts = [
     { label: "Custos da venda", value: r.variableCosts, color: "#E8B04B" },
-    { label: "Custos fixos", value: r.fixedCosts, color: "#8FB3A6" },
+    { label: "Custos fixos", value: r.fixedCosts, color: "#7D8FB5" },
     { label: positive ? "Sobra" : "Falta", value: Math.abs(r.operatingResult), color: positive ? palette.lime : "#FF8F7E" },
   ];
 
   return <View style={{ flex: 1, backgroundColor: palette.paper }}>
     {/* Resultado sempre visível */}
-    <View style={{ backgroundColor: palette.brand, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 18, borderBottomLeftRadius: 28, borderBottomRightRadius: 28, gap: 12 }}>
+    <View style={{ backgroundColor: palette.navy, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 18, borderBottomLeftRadius: 28, borderBottomRightRadius: 28, gap: 12 }}>
       <View style={{ width: "100%", maxWidth: 520, alignSelf: "center", gap: 12 }}>
         <Segmented dark options={SCENARIOS} value={scenario} onChange={setScenario} />
         <View style={{ flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 12 }}>
           <View style={{ flex: 1 }}>
-            <Text style={{ color: "#BFD8CE", fontSize: 13 }}>{positive ? "Sobra por mês" : "Falta por mês"}</Text>
+            <Text style={{ color: "#AEB9CF", fontSize: 13 }}>{positive ? "Sobra por mês" : "Falta por mês"}</Text>
             <Text style={{ color: positive ? palette.lime : "#FFB4A8", fontSize: 38, fontWeight: "800", letterSpacing: -1.2, ...numStyle }}>{formatMoney(r.operatingResult)}</Text>
           </View>
           <View style={{ alignItems: "flex-end" }}>
-            <Text style={{ color: "#BFD8CE", fontSize: 13 }}>Equilíbrio</Text>
+            <Text style={{ color: "#AEB9CF", fontSize: 13 }}>Equilíbrio</Text>
             <Text style={{ color: palette.white, fontSize: 20, fontWeight: "800", ...numStyle }}>{r.breakEvenCustomersPerDay === null ? "—" : `${Math.ceil(r.breakEvenCustomersPerDay)} clientes/dia`}</Text>
           </View>
         </View>
@@ -71,9 +71,9 @@ export default function SimulatorScreen() {
           {parts.map((p) => <View key={p.label} style={{ flex: Math.max(p.value / total, 0.001), backgroundColor: p.color }} />)}
         </View>
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
-          {parts.map((p) => <View key={p.label} style={{ flexDirection: "row", alignItems: "center", gap: 6 }}><View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: p.color }} /><Text style={{ color: "#CFE3DB", fontSize: 12, ...numStyle }}>{p.label} {formatMoney(p.value)}</Text></View>)}
+          {parts.map((p) => <View key={p.label} style={{ flexDirection: "row", alignItems: "center", gap: 6 }}><View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: p.color }} /><Text style={{ color: "#C9D2E3", fontSize: 12, ...numStyle }}>{p.label} {formatMoney(p.value)}</Text></View>)}
         </View>
-        <Text style={{ color: "#9FC1B4", fontSize: 12 }}>{SCENARIO_NOTE[scenario]} · vendas de {formatMoney(r.revenue)}/mês</Text>
+        <Text style={{ color: "#93A0BA", fontSize: 12 }}>{SCENARIO_NOTE[scenario]} · vendas de {formatMoney(r.revenue)}/mês</Text>
       </View>
     </View>
 

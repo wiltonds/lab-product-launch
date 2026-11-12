@@ -74,7 +74,7 @@ export const MISSIONS: Mission[] = [
 ];
 
 export type AppData = {
-  profile: { name: string; whatsapp: string; email: string; status: string; ageRange: string; homeCity: string; investable: number; reserve: number; personalMonthly: number; openingWhen: string; marketingConsent: boolean; termsAccepted: boolean };
+  profile: { name: string; whatsapp: string; email: string; motivation: string; stage: string; experience: string; verified: boolean; status: string; ageRange: string; homeCity: string; investable: number; reserve: number; personalMonthly: number; openingWhen: string; marketingConsent: boolean; termsAccepted: boolean };
   idea: { category: string; activity: string; municipality: string; municipalityCode: string; propertyFound: string; equipment: string; team: string; keepJob: string; outsideState: string };
   finance: FinanceInputs;
   completedMissions: string[];
@@ -84,7 +84,7 @@ export type AppData = {
 };
 
 export const DEFAULT_APP_DATA: AppData = {
-  profile: { name: "", whatsapp: "", email: "", status: "", ageRange: "", homeCity: "", investable: 30000, reserve: 12000, personalMonthly: 2500, openingWhen: "Em até 6 meses", marketingConsent: false, termsAccepted: false },
+  profile: { name: "", whatsapp: "", email: "", motivation: "", stage: "", experience: "", verified: false, status: "", ageRange: "", homeCity: "", investable: 30000, reserve: 12000, personalMonthly: 2500, openingWhen: "Em até 6 meses", marketingConsent: false, termsAccepted: false },
   idea: { category: "", activity: "", municipality: "Maceió", municipalityCode: "2704302", propertyFound: "Ainda não", equipment: "Ainda não", team: "Vou trabalhar sozinho", keepJob: "Quero manter meu emprego", outsideState: "" },
   finance: DEFAULT_FINANCE,
   completedMissions: [],
