@@ -1,0 +1,417 @@
+{
+  "source": "IBGE — Códigos dos Municípios",
+  "sourceUrl": "https://www.ibge.gov.br/explica/codigos-dos-municipios.php",
+  "retrievedAt": "2026-11-11T18:18:40.037408+00:00",
+  "count": 102,
+  "classification": "OBSERVADO — catálogo oficial de nomes/códigos; não é métrica de mercado",
+  "municipalities": [
+    {
+      "ibgeCode": "2700102",
+      "name": "Água Branca"
+    },
+    {
+      "ibgeCode": "2700201",
+      "name": "Anadia"
+    },
+    {
+      "ibgeCode": "2700300",
+      "name": "Arapiraca"
+    },
+    {
+      "ibgeCode": "2700409",
+      "name": "Atalaia"
+    },
+    {
+      "ibgeCode": "2700508",
+      "name": "Barra de Santo Antônio"
+    },
+    {
+      "ibgeCode": "2700607",
+      "name": "Barra de São Miguel"
+    },
+    {
+      "ibgeCode": "2700706",
+      "name": "Batalha"
+    },
+    {
+      "ibgeCode": "2700805",
+      "name": "Belém"
+    },
+    {
+      "ibgeCode": "2700904",
+      "name": "Belo Monte"
+    },
+    {
+      "ibgeCode": "2701001",
+      "name": "Boca da Mata"
+    },
+    {
+      "ibgeCode": "2701100",
+      "name": "Branquinha"
+    },
+    {
+      "ibgeCode": "2701209",
+      "name": "Cacimbinhas"
+    },
+    {
+      "ibgeCode": "2701308",
+      "name": "Cajueiro"
+    },
+    {
+      "ibgeCode": "2701357",
+      "name": "Campestre"
+    },
+    {
+      "ibgeCode": "2701407",
+      "name": "Campo Alegre"
+    },
+    {
+      "ibgeCode": "2701506",
+      "name": "Campo Grande"
+    },
+    {
+      "ibgeCode": "2701605",
+      "name": "Canapi"
+    },
+    {
+      "ibgeCode": "2701704",
+      "name": "Capela"
+    },
+    {
+      "ibgeCode": "2701803",
+      "name": "Carneiros"
+    },
+    {
+      "ibgeCode": "2701902",
+      "name": "Chã Preta"
+    },
+    {
+      "ibgeCode": "2702009",
+      "name": "Coité do Nóia"
+    },
+    {
+      "ibgeCode": "2702108",
+      "name": "Colônia Leopoldina"
+    },
+    {
+      "ibgeCode": "2702207",
+      "name": "Coqueiro Seco"
+    },
+    {
+      "ibgeCode": "2702306",
+      "name": "Coruripe"
+    },
+    {
+      "ibgeCode": "2702355",
+      "name": "Craíbas"
+    },
+    {
+      "ibgeCode": "2702405",
+      "name": "Delmiro Gouveia"
+    },
+    {
+      "ibgeCode": "2702504",
+      "name": "Dois Riachos"
+    },
+    {
+      "ibgeCode": "2702553",
+      "name": "Estrela de Alagoas"
+    },
+    {
+      "ibgeCode": "2702603",
+      "name": "Feira Grande"
+    },
+    {
+      "ibgeCode": "2702702",
+      "name": "Feliz Deserto"
+    },
+    {
+      "ibgeCode": "2702801",
+      "name": "Flexeiras"
+    },
+    {
+      "ibgeCode": "2702900",
+      "name": "Girau do Ponciano"
+    },
+    {
+      "ibgeCode": "2703007",
+      "name": "Ibateguara"
+    },
+    {
+      "ibgeCode": "2703106",
+      "name": "Igaci"
+    },
+    {
+      "ibgeCode": "2703205",
+      "name": "Igreja Nova"
+    },
+    {
+      "ibgeCode": "2703304",
+      "name": "Inhapi"
+    },
+    {
+      "ibgeCode": "2703403",
+      "name": "Jacaré dos Homens"
+    },
+    {
+      "ibgeCode": "2703502",
+      "name": "Jacuípe"
+    },
+    {
+      "ibgeCode": "2703601",
+      "name": "Japaratinga"
+    },
+    {
+      "ibgeCode": "2703700",
+      "name": "Jaramataia"
+    },
+    {
+      "ibgeCode": "2703759",
+      "name": "Jequiá da Praia"
+    },
+    {
+      "ibgeCode": "2703809",
+      "name": "Joaquim Gomes"
+    },
+    {
+      "ibgeCode": "2703908",
+      "name": "Jundiá"
+    },
+    {
+      "ibgeCode": "2704005",
+      "name": "Junqueiro"
+    },
+    {
+      "ibgeCode": "2704104",
+      "name": "Lagoa da Canoa"
+    },
+    {
+      "ibgeCode": "2704203",
+      "name": "Limoeiro de Anadia"
+    },
+    {
+      "ibgeCode": "2704302",
+      "name": "Maceió"
+    },
+    {
+      "ibgeCode": "2704401",
+      "name": "Major Isidoro"
+    },
+    {
+      "ibgeCode": "2704906",
+      "name": "Mar Vermelho"
+    },
+    {
+      "ibgeCode": "2704500",
+      "name": "Maragogi"
+    },
+    {
+      "ibgeCode": "2704609",
+      "name": "Maravilha"
+    },
+    {
+      "ibgeCode": "2704708",
+      "name": "Marechal Deodoro"
+    },
+    {
+      "ibgeCode": "2704807",
+      "name": "Maribondo"
+    },
+    {
+      "ibgeCode": "2705002",
+      "name": "Mata Grande"
+    },
+    {
+      "ibgeCode": "2705101",
+      "name": "Matriz de Camaragibe"
+    },
+    {
+      "ibgeCode": "2705200",
+      "name": "Messias"
+    },
+    {
+      "ibgeCode": "2705309",
+      "name": "Minador do Negrão"
+    },
+    {
+      "ibgeCode": "2705408",
+      "name": "Monteirópolis"
+    },
+    {
+      "ibgeCode": "2705507",
+      "name": "Murici"
+    },
+    {
+      "ibgeCode": "2705606",
+      "name": "Novo Lino"
+    },
+    {
+      "ibgeCode": "2705903",
+      "name": "Olho d'Água Grande"
+    },
+    {
+      "ibgeCode": "2705705",
+      "name": "Olho d'Água das Flores"
+    },
+    {
+      "ibgeCode": "2705804",
+      "name": "Olho d'Água do Casado"
+    },
+    {
+      "ibgeCode": "2706000",
+      "name": "Olivença"
+    },
+    {
+      "ibgeCode": "2706109",
+      "name": "Ouro Branco"
+    },
+    {
+      "ibgeCode": "2706208",
+      "name": "Palestina"
+    },
+    {
+      "ibgeCode": "2706307",
+      "name": "Palmeira dos Índios"
+    },
+    {
+      "ibgeCode": "2706406",
+      "name": "Pão de Açúcar"
+    },
+    {
+      "ibgeCode": "2706422",
+      "name": "Pariconha"
+    },
+    {
+      "ibgeCode": "2706448",
+      "name": "Paripueira"
+    },
+    {
+      "ibgeCode": "2706505",
+      "name": "Passo de Camaragibe"
+    },
+    {
+      "ibgeCode": "2706604",
+      "name": "Paulo Jacinto"
+    },
+    {
+      "ibgeCode": "2706703",
+      "name": "Penedo"
+    },
+    {
+      "ibgeCode": "2706802",
+      "name": "Piaçabuçu"
+    },
+    {
+      "ibgeCode": "2706901",
+      "name": "Pilar"
+    },
+    {
+      "ibgeCode": "2707008",
+      "name": "Pindoba"
+    },
+    {
+      "ibgeCode": "2707107",
+      "name": "Piranhas"
+    },
+    {
+      "ibgeCode": "2707206",
+      "name": "Poço das Trincheiras"
+    },
+    {
+      "ibgeCode": "2707305",
+      "name": "Porto Calvo"
+    },
+    {
+      "ibgeCode": "2707503",
+      "name": "Porto Real do Colégio"
+    },
+    {
+      "ibgeCode": "2707404",
+      "name": "Porto de Pedras"
+    },
+    {
+      "ibgeCode": "2707602",
+      "name": "Quebrangulo"
+    },
+    {
+      "ibgeCode": "2707701",
+      "name": "Rio Largo"
+    },
+    {
+      "ibgeCode": "2707800",
+      "name": "Roteiro"
+    },
+    {
+      "ibgeCode": "2707909",
+      "name": "Santa Luzia do Norte"
+    },
+    {
+      "ibgeCode": "2708006",
+      "name": "Santana do Ipanema"
+    },
+    {
+      "ibgeCode": "2708105",
+      "name": "Santana do Mundaú"
+    },
+    {
+      "ibgeCode": "2708204",
+      "name": "São Brás"
+    },
+    {
+      "ibgeCode": "2708303",
+      "name": "São José da Laje"
+    },
+    {
+      "ibgeCode": "2708402",
+      "name": "São José da Tapera"
+    },
+    {
+      "ibgeCode": "2708501",
+      "name": "São Luís do Quitunde"
+    },
+    {
+      "ibgeCode": "2708600",
+      "name": "São Miguel dos Campos"
+    },
+    {
+      "ibgeCode": "2708709",
+      "name": "São Miguel dos Milagres"
+    },
+    {
+      "ibgeCode": "2708808",
+      "name": "São Sebastião"
+    },
+    {
+      "ibgeCode": "2708907",
+      "name": "Satuba"
+    },
+    {
+      "ibgeCode": "2708956",
+      "name": "Senador Rui Palmeira"
+    },
+    {
+      "ibgeCode": "2709004",
+      "name": "Tanque d'Arca"
+    },
+    {
+      "ibgeCode": "2709103",
+      "name": "Taquarana"
+    },
+    {
+      "ibgeCode": "2709152",
+      "name": "Teotônio Vilela"
+    },
+    {
+      "ibgeCode": "2709202",
+      "name": "Traipu"
+    },
+    {
+      "ibgeCode": "2709301",
+      "name": "União dos Palmares"
+    },
+    {
+      "ibgeCode": "2709400",
+      "name": "Viçosa"
+    }
+  ]
+}

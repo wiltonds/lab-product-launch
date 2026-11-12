@@ -41,6 +41,42 @@ os zips pelo navegador e rode `extrair_al.py --pasta <pasta dos zips>`.
 3. Repositório privado funciona; o app pode ficar privado ou público nas
    configurações de compartilhamento.
 
+## Web app + API (o produto para o público)
+
+```
+data/publicado/ ──► api/ (FastAPI) ──► webapp/ (Expo, versão web)
+```
+
+- `webapp/`: o app Lab do Meu Negócio (Expo/React Native, publicado como site). O onboarding, o resultado, o simulador e o plano funcionam sem login, com os dados guardados no aparelho.
+- `api/`: lê `data/publicado/` com os mesmos módulos de `lab/` e responde em `GET /v1/insights?municipio=<código IBGE>&atividade=<id>` com três sinais:
+  - **concorrência**: ativos por morador, comparado com a média de AL;
+  - **sobrevivência**: Kaplan-Meier aos 24 meses, com faixa de confiança, nas 5 coortes completas mais recentes. Com menos de `N_MIN_COORTE` negócios no município, usa o estado;
+  - **movimento do setor**: aberturas contra baixadas e inaptas nos últimos 3 anos.
+
+  Sem `data/publicado/`, a API responde 503 e nunca serve dados de demonstração.
+- `api/atividades.json`: atividade do app → CNAE. **Falta validar** na lista CONCLA (`"validado": false`).
+
+Rodar localmente:
+
+```bash
+uvicorn api.main:app --reload                     # http://localhost:8000/docs
+cd webapp && pnpm install && EXPO_PUBLIC_INSIGHTS_API_URL=http://localhost:8000 pnpm dev:metro
+```
+
+### Atualizar os dados sem usar o seu computador
+
+O workflow `.github/workflows/atualizar-dados.yml` roda na nuvem do GitHub: baixa a base da Receita, recorta AL, gera `data/publicado/` e faz o commit sozinho. Roda todo dia 20 ou na hora, pela aba **Actions → Atualizar dados de Alagoas → Run workflow**. O relatório da auditoria fica anexado à execução.
+
+### Publicar (Render, um clique)
+
+1. Tenha `data/publicado/` no repositório (pelo workflow acima ou rodando os jobs).
+2. No render.com: **New → Blueprint → `wiltonds/lab-product-launch`**. O `render.yaml` cria os dois serviços:
+   - `lab-dados-api` (Docker, plano gratuito);
+   - `lab-do-meu-negocio` (site estático, já apontando para a API).
+3. Depois do primeiro deploy, troque `CORS_ORIGINS` da API pelo endereço do site.
+
+No plano gratuito, a API dorme depois de 15 minutos parada e a primeira consulta leva uns 30 segundos. O login com Manus não funciona fora do Manus: para contas de usuário, troque por outro provedor (ex.: Supabase Auth) numa próxima etapa.
+
 ## Estrutura
 
 ```

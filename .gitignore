@@ -6,3 +6,8 @@ data/raw/
 data/processed/
 data/privado/
 *.zip
+
+# web app (Expo)
+webapp/node_modules/
+webapp/.expo/
+webapp/dist/

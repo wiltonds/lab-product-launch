@@ -1,0 +1,95 @@
+# Atualiza os agregados de Alagoas na nuvem do GitHub (sem usar o computador de ninguém).
+# Baixa a base do CNPJ da Receita, recorta AL, gera data/publicado/ e faz commit.
+# Roda: todo dia 20 (a Receita costuma publicar na 2ª quinzena), manualmente pela aba
+# Actions ("Run workflow"), ou quando este arquivo muda na branch api-e-webapp.
+name: Atualizar dados de Alagoas
+
+on:
+  workflow_dispatch:
+    inputs:
+      mes:
+        description: "Edição da Receita (AAAA-MM). Vazio = a mais recente disponível."
+        required: false
+  schedule:
+    - cron: "17 9 20 * *"
+  push:
+    branches: [api-e-webapp]
+    paths: [".github/workflows/atualizar-dados.yml"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: atualizar-dados
+  cancel-in-progress: false
+
+jobs:
+  atualizar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependências
+        run: pip install numpy pandas pyarrow requests
+
+      - name: Descobrir a edição mais recente
+        id: mes
+        run: |
+          if [ -n "${{ github.event.inputs.mes }}" ]; then
+            echo "mes=${{ github.event.inputs.mes }}" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          for i in 0 1 2 3; do
+            m=$(date -u -d "$(date -u +%Y-%m-15) -$i month" +%Y-%m)
+            python jobs/baixar_cnpj.py --mes "$m" --apenas Municipios.zip
+            if [ -s "data/raw/cnpj/$m/Municipios.zip" ]; then
+              echo "Edição encontrada: $m"; echo "mes=$m" >> "$GITHUB_OUTPUT"; exit 0
+            fi
+          done
+          echo "::error::Nenhuma edição recente encontrada no endereço da Receita. Confira BASE_URL em jobs/baixar_cnpj.py."
+          exit 1
+
+      - name: Baixar CNPJ (estabelecimentos, municípios, CNAEs)
+        run: |
+          m=${{ steps.mes.outputs.mes }}
+          python jobs/baixar_cnpj.py --mes "$m" --apenas \
+            Estabelecimentos0.zip Estabelecimentos1.zip Estabelecimentos2.zip Estabelecimentos3.zip Estabelecimentos4.zip \
+            Estabelecimentos5.zip Estabelecimentos6.zip Estabelecimentos7.zip Estabelecimentos8.zip Estabelecimentos9.zip \
+            Municipios.zip Cnaes.zip
+          n=$(ls data/raw/cnpj/$m/Estabelecimentos*.zip 2>/dev/null | wc -l)
+          echo "Arquivos de estabelecimentos baixados: $n de 10"
+          if [ "$n" -lt 10 ]; then echo "::error::Download incompleto ($n de 10)."; exit 1; fi
+          du -sh data/raw/cnpj/$m
+
+      - name: Recortar Alagoas e apagar os zips
+        run: |
+          python jobs/extrair_al.py --mes ${{ steps.mes.outputs.mes }}
+          rm -rf data/raw/cnpj
+
+      - name: População (IBGE)
+        run: python jobs/coletar_populacao.py
+
+      - name: Auditoria e agregados
+        run: |
+          python jobs/auditar_fontes.py --mes ${{ steps.mes.outputs.mes }}
+          python jobs/publicar_agregados.py --mes ${{ steps.mes.outputs.mes }}
+          ls -la data/publicado
+
+      - name: Guardar relatório de auditoria
+        uses: actions/upload-artifact@v4
+        with:
+          name: auditoria-${{ steps.mes.outputs.mes }}
+          path: data/auditoria/
+
+      - name: Salvar agregados no repositório
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/publicado data/auditoria
+          if git diff --cached --quiet; then echo "Nada mudou."; exit 0; fi
+          git commit -m "Agregados de AL, edição ${{ steps.mes.outputs.mes }}"
+          git push

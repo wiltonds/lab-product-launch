@@ -1,0 +1,35 @@
+# Render Blueprint: publica a API de dados e o web app juntos.
+# No Render: New > Blueprint > repositório wiltonds/lab-product-launch.
+services:
+  - type: web
+    name: lab-dados-api
+    runtime: docker
+    plan: free
+    dockerfilePath: ./api/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: CORS_ORIGINS
+        value: "*"   # depois do primeiro deploy, troque pelo endereço do web app
+
+  - type: web
+    name: lab-do-meu-negocio
+    runtime: static
+    rootDir: webapp
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && EXPO_PUBLIC_INSIGHTS_API_URL=https://$API_HOST npx expo export --platform web --output-dir dist --clear
+    staticPublishPath: dist
+    envVars:
+      - key: API_HOST
+        fromService:
+          type: web
+          name: lab-dados-api
+          property: host
+    routes:
+      - { type: rewrite, source: /onboarding, destination: /onboarding.html }
+      - { type: rewrite, source: /simulator, destination: /simulator.html }
+      - { type: rewrite, source: /missions, destination: /missions.html }
+      - { type: rewrite, source: /profile, destination: /profile.html }
+      - { type: rewrite, source: /report, destination: /report.html }
+      - { type: rewrite, source: /mentorship, destination: /mentorship.html }
+      - { type: rewrite, source: /privacy, destination: /privacy.html }
+      - { type: rewrite, source: /sales-test, destination: /sales-test.html }

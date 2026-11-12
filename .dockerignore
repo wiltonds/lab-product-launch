@@ -1,0 +1,12 @@
+webapp
+notebooks
+docs
+prototipo
+specs
+tools
+tests
+data/raw
+data/processed
+data/privado
+.git
+**/__pycache__
