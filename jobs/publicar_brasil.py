@@ -28,6 +28,7 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from lab.config import AUDIT, PROC, PUB  # noqa: E402
+from lab.compacto import GRANDES, compactar  # noqa: E402
 from lab.publicacao import FORMATO, montar  # noqa: E402
 
 VERSAO = "0.3.0"
@@ -49,7 +50,8 @@ def main() -> None:
     for velho in ANTIGOS:
         (PUB / velho).unlink(missing_ok=True)
     for nome in ("municipios", "ativos", "movimento", "sobrevivencia", "sobrevivencia_uf", "saturacao"):
-        r[nome].to_parquet(PUB / f"{nome}.parquet", index=False, compression="zstd")
+        t = compactar(r[nome], nome) if nome in GRANDES else r[nome]
+        t.to_parquet(PUB / f"{nome}.parquet", index=False, compression="zstd")
     if (d / "cnaes.parquet").exists():
         pd.read_parquet(d / "cnaes.parquet").to_parquet(PUB / "cnaes.parquet", index=False)
 
