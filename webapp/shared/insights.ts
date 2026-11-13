@@ -29,6 +29,8 @@ export type MunicipalInsights = {
   modelVersion: string;
   generatedAt: string;
   signals: InsightSignal[];
+  /** Partes do Índice Vinga que vêm dos dados públicos (0–100; null = sem dados suficientes). */
+  marketScore?: { market: number | null; survival: number | null };
   limitations: string[];
 };
 

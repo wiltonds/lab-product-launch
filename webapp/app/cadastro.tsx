@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View, type TextInputProps } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -6,10 +6,7 @@ import { Body, Button, Heading, Page, palette } from "@/components/lab-ui";
 import { useAppData } from "@/hooks/use-app-data";
 import { savePerfil, sendCode, supabaseConfigured, verifyCode } from "@/shared/supabase";
 import { maskWhatsapp, normalizeEmail, onlyDigits, suggestEmail, validateCode, validateEmail, validateName, validateWhatsapp } from "@/shared/validation";
-import municipalityData from "@/shared/data/alagoas-municipios.json";
-
-const localities = municipalityData.municipalities as { ibgeCode: string; name: string }[];
-const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+import { searchCities, type City } from "@/shared/cities";
 
 function Input({ label, error, icon, ...props }: TextInputProps & { label: string; error?: string | null; icon: keyof typeof Ionicons.glyphMap }) {
   return <View style={{ gap: 6 }}>
@@ -33,21 +30,28 @@ export default function CadastroScreen() {
   const [email, setEmail] = useState(data.profile.email);
   const [city, setCity] = useState(data.idea.municipality || data.profile.homeCity);
   const [cityOpen, setCityOpen] = useState(false);
+  const [picked, setPicked] = useState<City | null>(data.idea.municipalityCode ? { code: data.idea.municipalityCode, name: data.idea.municipality, uf: data.idea.municipalityUf || "AL" } : null);
+  const [cities, setCities] = useState<City[]>([]);
   const [consent, setConsent] = useState(data.profile.marketingConsent);
   const [code, setCode] = useState("");
   const [touched, setTouched] = useState(false);
   const [busy, setBusy] = useState(false);
   const [serverError, setServerError] = useState("");
 
-  const cityMatch = localities.find((c) => norm(c.name) === norm(city.trim()));
+  const cityMatch = picked && picked.name === city ? picked : null;
   const errors = {
     name: mode === "criar" ? validateName(name) : null,
     whatsapp: mode === "criar" ? validateWhatsapp(whatsapp) : null,
     email: validateEmail(email),
-    city: mode === "criar" && !cityMatch ? "Escolha um município de Alagoas da lista." : null,
+    city: mode === "criar" && !cityMatch ? "Digite e escolha a sua cidade na lista." : null,
   };
   const valid = !Object.values(errors).some(Boolean);
-  const cities = useMemo(() => (cityOpen && city ? localities.filter((c) => norm(c.name).includes(norm(city))).slice(0, 5) : []), [city, cityOpen]);
+  useEffect(() => {
+    if (!cityOpen || city.trim().length < 2) { setCities([]); return; }
+    const ctrl = new AbortController();
+    const t = setTimeout(() => { searchCities(city, ctrl.signal, 5).then((r) => setCities(r.cities)).catch(() => undefined); }, 250);
+    return () => { clearTimeout(t); ctrl.abort(); };
+  }, [city, cityOpen]);
   const fix = suggestEmail(email);
   const show = (e: string | null) => (touched ? e : null);
 
@@ -69,7 +73,7 @@ export default function CadastroScreen() {
     let err = await verifyCode(normalizeEmail(email), onlyDigits(code));
     if (!err && mode === "criar") {
       err = await savePerfil({
-        nome: name.trim(), whatsapp: onlyDigits(whatsapp), municipio: cityMatch?.name ?? "", municipio_codigo: cityMatch?.ibgeCode ?? "",
+        nome: name.trim(), whatsapp: onlyDigits(whatsapp), municipio: cityMatch?.name ?? "", municipio_codigo: cityMatch?.code ?? "",
         motivacao: data.profile.motivation, fase: data.profile.stage, experiencia: data.profile.experience, aceita_marketing: consent,
       });
     }
@@ -110,8 +114,8 @@ export default function CadastroScreen() {
         <Input label="WhatsApp" icon="logo-whatsapp" value={whatsapp} onChangeText={(v) => setWhatsapp(maskWhatsapp(v))} placeholder="(82) 9 9999-9999" keyboardType="phone-pad" error={show(errors.whatsapp)} />
         <View style={{ gap: 6 }}>
           <Input label="Seu município" icon="location-outline" value={city} onChangeText={(v) => { setCity(v); setCityOpen(true); }} placeholder="Ex.: Arapiraca" error={show(errors.city)} />
-          {cities.map((c) => <Pressable key={c.ibgeCode} onPress={() => { setCity(c.name); setCityOpen(false); }} style={{ paddingVertical: 11, paddingHorizontal: 14, backgroundColor: palette.white, borderRadius: 12 }}>
-            <Text style={{ color: palette.ink, fontSize: 15 }}>{c.name}</Text>
+          {cities.map((c) => <Pressable key={c.code} onPress={() => { setCity(c.name); setPicked(c); setCityOpen(false); }} style={{ paddingVertical: 11, paddingHorizontal: 14, backgroundColor: palette.white, borderRadius: 12 }}>
+            <Text style={{ color: palette.ink, fontSize: 15 }}>{c.name} <Text style={{ color: palette.muted }}>· {c.uf}</Text></Text>
           </Pressable>)}
         </View>
         <Pressable onPress={() => setConsent(!consent)} style={{ flexDirection: "row", gap: 12, alignItems: "center" }}>

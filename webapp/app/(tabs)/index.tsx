@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useMunicipalInsights } from "@/hooks/use-municipal-insights";
 import { activityIcon, findActivity } from "@/shared/catalog";
 import { calculateScenario, MISSIONS } from "@/shared/finance";
+import { computeIndice } from "@/shared/indice";
 import { formatMoney } from "@/shared/format";
 import { PLANNED_SIGNALS, SMALL_SAMPLE_THRESHOLD, type InsightSignal } from "@/shared/insights";
 
@@ -53,7 +54,7 @@ function Welcome() {
 
     <View style={{ backgroundColor: palette.lime, borderRadius: 22, padding: 18, gap: 10 }}>
       <Text style={{ color: palette.navy, fontWeight: "800", fontSize: 16 }}>Dados oficiais, não achismo</Text>
-      {[["business-outline", "Cadastro de empresas da Receita Federal"], ["people-outline", "População do IBGE"], ["map-outline", "Os 102 municípios de Alagoas"]].map(([ic, t]) =>
+      {[["business-outline", "Cadastro de empresas da Receita Federal"], ["people-outline", "População do IBGE"], ["map-outline", "Os 5.570 municípios do Brasil"]].map(([ic, t]) =>
         <View key={t} style={{ flexDirection: "row", gap: 10, alignItems: "center" }}><Ionicons name={ic as any} size={18} color={palette.navy} /><Text style={{ color: palette.navy, fontSize: 15 }}>{t}</Text></View>)}
     </View>
     <Text style={{ color: palette.faint, fontSize: 12, textAlign: "center", lineHeight: 18 }}>A análise organiza premissas e riscos. Ela não garante sucesso.</Text>
@@ -96,6 +97,7 @@ export default function HomeScreen() {
   const capitalNeeded = f.initialInvestment + r.workingCapital;
   const investableLabel = data.profile.investable > 100000 ? "mais de R$ 100 mil" : formatMoney(data.profile.investable);
   const capitalOk = data.profile.investable >= capitalNeeded;
+  const indice = computeIndice(data, insights.status === "ready" ? insights.data.marketScore ?? null : null);
   const pending = MISSIONS.filter((m) => !data.completedMissions.includes(m.id));
   const progress = Math.round((data.completedMissions.length / MISSIONS.length) * 100);
 
@@ -105,6 +107,34 @@ export default function HomeScreen() {
       <Pressable onPress={() => router.push("/onboarding")} style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: palette.white, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999 }}>
         <Ionicons name="create-outline" size={15} color={palette.brand} /><Text style={{ color: palette.brand, fontWeight: "700", fontSize: 13 }}>Refazer</Text>
       </Pressable>
+    </View>
+
+    {/* Índice Vinga: 1 número, 1 motivo, 1 ação */}
+    <View style={{ backgroundColor: palette.white, borderRadius: 30, padding: 22, gap: 16, borderWidth: 2, borderColor: palette.brand }}>
+      <View style={{ flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between" }}>
+        <View style={{ gap: 2 }}>
+          <Text style={{ color: palette.brandText, fontWeight: "800", fontSize: 12, letterSpacing: 1 }}>ÍNDICE VINGA</Text>
+          <Text accessibilityLabel={`Índice Vinga ${indice.score} de 100`} style={{ color: palette.ink, fontSize: 56, fontWeight: "800", letterSpacing: -2, ...numStyle }}>{indice.score}<Text style={{ fontSize: 20, color: palette.muted }}> /100</Text></Text>
+        </View>
+        <View style={{ flexDirection: "row", gap: 6, paddingBottom: 12 }}>
+          {indice.parts.map((p) => <View key={p.id} accessibilityLabel={`${p.title}: ${p.score ?? "sem dados"}`} style={{ alignItems: "center", gap: 4 }}>
+            <View style={{ width: 10, height: 44, borderRadius: 5, backgroundColor: palette.paper, justifyContent: "flex-end", overflow: "hidden" }}>
+              <View style={{ height: `${p.score ?? 0}%`, backgroundColor: p.score === null ? palette.line : palette.navy }} />
+            </View>
+            <Text style={{ color: palette.muted, fontSize: 10, fontWeight: "700" }}>{p.title.slice(0, 4)}</Text>
+          </View>)}
+        </View>
+      </View>
+      <Text style={{ color: palette.ink, fontSize: 18, fontWeight: "800" }}>{indice.label}</Text>
+      <View style={{ gap: 4 }}>
+        <Text style={{ color: palette.muted, fontWeight: "800", fontSize: 12, letterSpacing: 1 }}>POR QUÊ</Text>
+        <Text style={{ color: palette.ink, fontSize: 16, lineHeight: 23 }}>{indice.reason}</Text>
+      </View>
+      <View style={{ backgroundColor: palette.brandSoft, borderRadius: 18, padding: 14, gap: 4 }}>
+        <Text style={{ color: palette.ink, fontWeight: "800", fontSize: 12, letterSpacing: 1 }}>FAÇA ESTA SEMANA</Text>
+        <Text style={{ color: palette.ink, fontSize: 16, lineHeight: 23, fontWeight: "600" }}>{indice.action}</Text>
+      </View>
+      {indice.partial ? <Text style={{ color: palette.muted, fontSize: 13, lineHeight: 19 }}>{insights.status === "loading" ? "Buscando os dados da sua cidade…" : "Nota parcial: sem os dados da cidade, usamos só as suas contas e o seu preparo."}</Text> : null}
     </View>
 
     {/* Resultado principal */}

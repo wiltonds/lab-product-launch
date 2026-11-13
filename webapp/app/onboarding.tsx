@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -7,10 +7,7 @@ import { useAppData } from "@/hooks/use-app-data";
 import { BUSINESS_CATEGORIES, POPULAR_MUNICIPALITIES } from "@/shared/catalog";
 import { formatMoney } from "@/shared/format";
 import { validateName } from "@/shared/validation";
-import municipalityData from "@/shared/data/alagoas-municipios.json";
-
-const localities = municipalityData.municipalities as { ibgeCode: string; name: string }[];
-const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+import { findLocal, searchCities, type City } from "@/shared/cities";
 const ACTIVITIES = BUSINESS_CATEGORIES.flatMap((c) => c.activities.map((a) => ({ ...a, category: c.id })));
 
 const MOTIVATION = [
@@ -49,12 +46,21 @@ export default function OnboardingScreen() {
   const [step, setStep] = useState(0);
   const [name, setName] = useState(data.profile.name);
   const [query, setQuery] = useState("");
-  const [outside, setOutside] = useState(Boolean(data.idea.outsideState));
+  const [cities, setCities] = useState<City[]>([]);
+  const [searching, setSearching] = useState(false);
   const [building, setBuilding] = useState(false);
   const [error, setError] = useState("");
 
   const first = (data.profile.name || name).trim().split(" ")[0];
-  const cities = useMemo(() => (query ? localities.filter((c) => norm(c.name).includes(norm(query))).slice(0, 6) : []), [query]);
+  useEffect(() => {
+    if (!query.trim()) { setCities([]); return; }
+    const ctrl = new AbortController();
+    setSearching(true);
+    const t = setTimeout(() => {
+      searchCities(query, ctrl.signal).then((r) => { setCities(r.cities); setSearching(false); }).catch(() => undefined);
+    }, 250);
+    return () => { clearTimeout(t); ctrl.abort(); };
+  }, [query]);
   const go = (n: number) => { setError(""); setStep(n); };
   const advance = () => setTimeout(() => go(step + 1), 200);
   const setProfile = (patch: Partial<typeof data.profile>) => void update({ profile: { ...data.profile, ...patch } });
@@ -65,11 +71,10 @@ export default function OnboardingScreen() {
     setProfile({ name: name.trim() });
     go(1);
   };
-  const pickCity = (cityName: string) => {
-    const city = localities.find((c) => c.name === cityName);
+  const pickCity = (city: City | undefined) => {
     if (!city) return;
-    void update({ idea: { ...data.idea, municipality: city.name, municipalityCode: city.ibgeCode, outsideState: "" } });
-    setQuery(""); setOutside(false); advance();
+    void update({ idea: { ...data.idea, municipality: city.name, municipalityCode: city.code, municipalityUf: city.uf, outsideState: "" } });
+    setQuery(""); advance();
   };
   const finish = () => {
     if (!data.profile.termsAccepted) { setError("Para ver o resultado, aceite os termos de uso."); return; }
@@ -88,7 +93,7 @@ export default function OnboardingScreen() {
     return <View style={{ flex: 1, backgroundColor: palette.navy, alignItems: "center", justifyContent: "center", padding: 32, gap: 18 }}>
       <View style={{ width: 76, height: 76, borderRadius: 26, backgroundColor: palette.brand, alignItems: "center", justifyContent: "center" }}><Ionicons name="analytics" size={36} color={palette.white} /></View>
       <Heading color={palette.white} size={26}>{first ? `Pronto, ${first}!` : "Pronto!"}</Heading>
-      <Body color="#C9D2E3">Cruzando seus números com os dados de {data.idea.municipality || "Alagoas"} para {data.idea.activity.toLowerCase() || "o seu negócio"}…</Body>
+      <Body color="#C9D2E3">Cruzando seus números com os dados de {data.idea.municipality || "sua cidade"} para {data.idea.activity.toLowerCase() || "o seu negócio"}…</Body>
     </View>;
   }
 
@@ -148,26 +153,19 @@ export default function OnboardingScreen() {
 
       {step === 5 ? <>
         <Heading>Em qual cidade?</Heading>
-        <Body>Começamos por Alagoas: são 102 municípios com dados da Receita Federal e do IBGE.</Body>
+        <Body>Todos os 5.570 municípios do Brasil, com dados da Receita Federal e do IBGE.</Body>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: palette.white, borderRadius: 18, paddingHorizontal: 16, borderWidth: 2, borderColor: palette.line }}>
           <Ionicons name="search" size={18} color={palette.muted} />
-          <TextInput value={query} onChangeText={setQuery} placeholder="Buscar município" placeholderTextColor={palette.faint} style={{ flex: 1, paddingVertical: 16, fontSize: 16, color: palette.ink }} accessibilityLabel="Buscar município" />
+          <TextInput value={query} onChangeText={setQuery} placeholder="Digite o nome da cidade" placeholderTextColor={palette.faint} style={{ flex: 1, paddingVertical: 16, fontSize: 16, color: palette.ink }} accessibilityLabel="Buscar município" />
         </View>
-        {cities.map((c) => <Pressable key={c.ibgeCode} onPress={() => pickCity(c.name)} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 14, paddingHorizontal: 6, borderBottomWidth: 1, borderBottomColor: palette.line }}>
-          <Ionicons name="location" size={18} color={palette.brand} /><Text style={{ fontSize: 16, color: palette.ink, flex: 1 }}>{c.name}</Text><Ionicons name="chevron-forward" size={16} color={palette.faint} />
+        {cities.map((c) => <Pressable key={c.code} onPress={() => pickCity(c)} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 14, paddingHorizontal: 6, borderBottomWidth: 1, borderBottomColor: palette.line }}>
+          <Ionicons name="location" size={18} color={palette.brand} /><Text style={{ fontSize: 16, color: palette.ink, flex: 1 }}>{c.name} <Text style={{ color: palette.muted }}>· {c.uf}</Text></Text><Ionicons name="chevron-forward" size={16} color={palette.faint} />
         </Pressable>)}
-        {query && cities.length === 0 ? <Body>Nenhum município de Alagoas com esse nome.</Body> : null}
+        {query && !searching && cities.length === 0 ? <Body>Nenhuma cidade com esse nome. Confira a grafia.</Body> : null}
         {!query ? <>
           <Text style={{ color: palette.muted, fontWeight: "800", fontSize: 12, letterSpacing: 1, textTransform: "uppercase" }}>Mais buscadas</Text>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>{POPULAR_MUNICIPALITIES.map((m) => <Chip key={m} label={m} selected={data.idea.municipality === m && !outside} onPress={() => pickCity(m)} />)}</View>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>{POPULAR_MUNICIPALITIES.map((m) => <Chip key={m} label={m} selected={data.idea.municipality === m} onPress={() => pickCity(findLocal(m))} />)}</View>
         </> : null}
-        <Pressable onPress={() => setOutside(!outside)} style={{ paddingVertical: 8 }}><Text style={{ color: palette.brand, fontWeight: "700" }}>{outside ? "Voltar para Alagoas" : "Vou abrir fora de Alagoas"}</Text></Pressable>
-        {outside ? <View style={{ gap: 10, backgroundColor: palette.amberSoft, padding: 16, borderRadius: 18 }}>
-          <Text style={{ color: palette.amber, fontWeight: "800" }}>Ainda não cobrimos outros estados</Text>
-          <Body color={palette.ink}>Diga o estado e avisamos quando chegar. O simulador financeiro funciona para qualquer lugar.</Body>
-          <TextInput value={data.idea.outsideState === "Outro estado" ? "" : data.idea.outsideState} onChangeText={(v) => void update({ idea: { ...data.idea, outsideState: v || "Outro estado" } })} placeholder="Ex.: Pernambuco" placeholderTextColor={palette.faint} style={{ backgroundColor: palette.white, borderRadius: 14, padding: 14, fontSize: 16 }} />
-          <Button title="Continuar" onPress={() => { if (!data.idea.outsideState) void update({ idea: { ...data.idea, outsideState: "Outro estado" } }); go(6); }} />
-        </View> : null}
       </> : null}
 
       {step === 6 ? <>

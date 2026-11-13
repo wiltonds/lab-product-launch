@@ -34,6 +34,28 @@ Pegamos os negócios abertos nos 5 anos mais recentes que já completaram 2 anos
 ### 4. Movimento do setor: está abrindo mais ou fechando mais?
 Somamos aberturas e fechamentos dos últimos 36 meses na cidade e comparamos com o estado.
 
+## O Índice Vinga (0 a 100)
+
+Junta quatro partes, cada uma de 0 a 100 (maior = mais a favor). Os pesos abaixo são a versão inicial e serão calibrados com dados reais.
+
+| Parte | De onde vem | Peso | Peso para quem está recomeçando |
+| --- | --- | --- | --- |
+| Mercado | Espaço no mercado (65%) e movimento do setor (35%) | 30% | 25% |
+| Sobrevivência | Sobrevivência em 2 anos: 40% vira nota 0 e 90% vira nota 100 | 25% | 20% |
+| Bolso | Folga nas contas (50%), meses de reserva da família (30%) e dinheiro para abrir (20%) | 30% | 40% |
+| Preparo | Experiência no ramo (60%) e fase do plano (40%) | 15% | 15% |
+
+- **Recomeço:** quem diz que perdeu o emprego tem mais peso no bolso, porque um erro custa mais caro.
+- **O motivo** mostrado no app é a parte que mais tira pontos da nota (peso × distância até 100). **A ação** da semana vem desse motivo.
+- **Nota parcial:** sem os dados da cidade, a nota usa só bolso e preparo, e o app avisa.
+
+| Nota | O que o app diz |
+| --- | --- |
+| 75 a 100 | Vinga, com boas chances |
+| 55 a 74 | Vinga, com atenção |
+| 35 a 54 | Dá, mas ajuste antes de investir |
+| 0 a 34 | Ainda não: mude o plano antes |
+
 ## O que os números NÃO dizem (limites)
 
 1. **Negócio sem CNPJ não aparece.** Muita gente trabalha na informalidade, então a concorrência real costuma ser **maior** do que a mostrada.
@@ -44,5 +66,7 @@ Somamos aberturas e fechamentos dos últimos 36 meses na cidade e comparamos com
 
 ## Como sabemos se funciona
 
+- **Sobrevivência:** a cada edição, o modelo é treinado com as 5 coortes anteriores e testado na coorte seguinte, que ele nunca viu. Comparamos três jeitos de prever: só a cidade, só o estado e o Bayes empírico. O resultado sai no relatório `data/auditoria/municipios_<edição>.md` e no `meta.json`.
+- **Espaço no mercado:** validação cruzada em 5 partes. Cada pedaço das cidades é previsto por um modelo que não o viu, e comparamos com a regra simples "proporcional à população".
 - Todo o código é testado com dados sintéticos de resultado conhecido (o modelo precisa recuperar o que foi colocado).
-- Próximo passo: treinar com as empresas abertas até 2021 e testar com as de 2022, que o modelo nunca viu. Um modelo mais complexo só entra se acertar mais nesse teste.
+- Regra da navalha de Occam: se o modelo mais complexo não ganhar no teste fora da amostra, volta o mais simples.
