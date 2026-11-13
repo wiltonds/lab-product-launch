@@ -3,7 +3,7 @@
 # roda os modelos (sobrevivência com Bayes empírico e espaço no mercado) e faz commit
 # de data/publicado/ (só contagens e coeficientes, nada identifica empresa ou pessoa).
 # Roda: todo dia 20 (a Receita costuma publicar na 2ª quinzena), manualmente pela aba
-# Actions ("Run workflow"), ou quando este arquivo muda na branch brasil-todo.
+# Actions ("Run workflow"), ou quando o código do motor (jobs/, lab/) muda na main.
 name: Atualizar dados do Brasil
 
 on:
@@ -14,9 +14,9 @@ on:
         required: false
   schedule:
     - cron: "17 9 20 * *"
-  push:
-    branches: [brasil-todo]
-    paths: [".github/workflows/atualizar-dados.yml"]
+  push:   # roda de novo quando o código do motor muda na main (não quando só os dados mudam)
+    branches: [main]
+    paths: [".github/workflows/atualizar-dados.yml", "jobs/**", "lab/**"]
 
 permissions:
   contents: write

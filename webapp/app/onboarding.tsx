@@ -1,13 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Body, Button, Chip, Choice, Heading, OptionTile, Page, ProgressBar, Stepper, palette, numStyle } from "@/components/lab-ui";
 import { useAppData } from "@/hooks/use-app-data";
-import { BUSINESS_CATEGORIES, POPULAR_MUNICIPALITIES } from "@/shared/catalog";
+import { BUSINESS_CATEGORIES } from "@/shared/catalog";
 import { formatMoney } from "@/shared/format";
 import { validateName } from "@/shared/validation";
-import { findLocal, searchCities, type City } from "@/shared/cities";
+import { citiesOf, searchCities, stateName, STATES, type City } from "@/shared/cities";
 const ACTIVITIES = BUSINESS_CATEGORIES.flatMap((c) => c.activities.map((a) => ({ ...a, category: c.id })));
 
 const MOTIVATION = [
@@ -46,21 +46,12 @@ export default function OnboardingScreen() {
   const [step, setStep] = useState(0);
   const [name, setName] = useState(data.profile.name);
   const [query, setQuery] = useState("");
-  const [cities, setCities] = useState<City[]>([]);
-  const [searching, setSearching] = useState(false);
+  const [ufPick, setUfPick] = useState("");
   const [building, setBuilding] = useState(false);
   const [error, setError] = useState("");
 
   const first = (data.profile.name || name).trim().split(" ")[0];
-  useEffect(() => {
-    if (!query.trim()) { setCities([]); return; }
-    const ctrl = new AbortController();
-    setSearching(true);
-    const t = setTimeout(() => {
-      searchCities(query, ctrl.signal).then((r) => { setCities(r.cities); setSearching(false); }).catch(() => undefined);
-    }, 250);
-    return () => { clearTimeout(t); ctrl.abort(); };
-  }, [query]);
+  const cities = useMemo(() => (ufPick || query.trim() ? searchCities(query, { uf: ufPick || undefined, limit: ufPick ? 12 : 8 }) : []), [query, ufPick]);
   const go = (n: number) => { setError(""); setStep(n); };
   const advance = () => setTimeout(() => go(step + 1), 200);
   const setProfile = (patch: Partial<typeof data.profile>) => void update({ profile: { ...data.profile, ...patch } });
@@ -151,22 +142,37 @@ export default function OnboardingScreen() {
         <View style={{ gap: 10 }}>{EXPERIENCE.map((x) => <Choice key={x} label={x} selected={data.profile.experience === x} onPress={() => { setProfile({ experience: x }); advance(); }} />)}</View>
       </> : null}
 
-      {step === 5 ? <>
-        <Heading>Em qual cidade?</Heading>
-        <Body>Todos os 5.570 municípios do Brasil, com dados da Receita Federal e do IBGE.</Body>
+      {step === 5 ? (!ufPick ? <>
+        <Heading>Em qual estado?</Heading>
+        <Body>Depois você escolhe a cidade. Temos dados de todas as cidades do Brasil.</Body>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: palette.white, borderRadius: 18, paddingHorizontal: 16, borderWidth: 2, borderColor: palette.line }}>
           <Ionicons name="search" size={18} color={palette.muted} />
-          <TextInput value={query} onChangeText={setQuery} placeholder="Digite o nome da cidade" placeholderTextColor={palette.faint} style={{ flex: 1, paddingVertical: 16, fontSize: 16, color: palette.ink }} accessibilityLabel="Buscar município" />
+          <TextInput value={query} onChangeText={setQuery} placeholder="Ou digite a cidade direto" placeholderTextColor={palette.faint} style={{ flex: 1, paddingVertical: 16, fontSize: 16, color: palette.ink }} accessibilityLabel="Buscar cidade em todo o Brasil" />
         </View>
-        {cities.map((c) => <Pressable key={c.code} onPress={() => pickCity(c)} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 14, paddingHorizontal: 6, borderBottomWidth: 1, borderBottomColor: palette.line }}>
-          <Ionicons name="location" size={18} color={palette.brand} /><Text style={{ fontSize: 16, color: palette.ink, flex: 1 }}>{c.name} <Text style={{ color: palette.muted }}>· {c.uf}</Text></Text><Ionicons name="chevron-forward" size={16} color={palette.faint} />
-        </Pressable>)}
-        {query && !searching && cities.length === 0 ? <Body>Nenhuma cidade com esse nome. Confira a grafia.</Body> : null}
-        {!query ? <>
-          <Text style={{ color: palette.muted, fontWeight: "800", fontSize: 12, letterSpacing: 1, textTransform: "uppercase" }}>Mais buscadas</Text>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>{POPULAR_MUNICIPALITIES.map((m) => <Chip key={m} label={m} selected={data.idea.municipality === m} onPress={() => pickCity(findLocal(m))} />)}</View>
+        {query ? <>
+          {cities.map((c) => <CityRow key={c.code} city={c} onPress={() => pickCity(c)} showUf />)}
+          {cities.length === 0 ? <Body>Nenhuma cidade com esse nome. Confira a grafia ou escolha o estado abaixo.</Body> : null}
         </> : null}
-      </> : null}
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+          {STATES.map((st) => <Pressable key={st.uf} accessibilityRole="button" accessibilityLabel={st.name} onPress={() => { setUfPick(st.uf); setQuery(""); }}
+            style={{ width: "31%", minHeight: 64, backgroundColor: data.idea.municipalityUf === st.uf ? palette.brandSoft : palette.white, borderRadius: 16, borderWidth: 2, borderColor: data.idea.municipalityUf === st.uf ? palette.brand : palette.line, padding: 10, justifyContent: "center" }}>
+            <Text style={{ color: palette.ink, fontWeight: "800", fontSize: 16 }}>{st.uf}</Text>
+            <Text numberOfLines={1} style={{ color: palette.muted, fontSize: 12 }}>{st.name}</Text>
+          </Pressable>)}
+        </View>
+      </> : <>
+        <Pressable onPress={() => { setUfPick(""); setQuery(""); }} accessibilityRole="button" style={{ flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-start" }}>
+          <Ionicons name="swap-horizontal" size={16} color={palette.brandText} /><Text style={{ color: palette.brandText, fontWeight: "700" }}>Trocar estado</Text>
+        </Pressable>
+        <Heading>Em qual cidade de {stateName(ufPick)}?</Heading>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: palette.white, borderRadius: 18, paddingHorizontal: 16, borderWidth: 2, borderColor: palette.line }}>
+          <Ionicons name="search" size={18} color={palette.muted} />
+          <TextInput value={query} onChangeText={setQuery} autoFocus placeholder={`Buscar entre ${citiesOf(ufPick)} cidades`} placeholderTextColor={palette.faint} style={{ flex: 1, paddingVertical: 16, fontSize: 16, color: palette.ink }} accessibilityLabel={`Buscar cidade de ${stateName(ufPick)}`} />
+        </View>
+        {!query ? <Text style={{ color: palette.muted, fontWeight: "800", fontSize: 12, letterSpacing: 1 }}>MAIORES CIDADES</Text> : null}
+        {cities.map((c) => <CityRow key={c.code} city={c} onPress={() => pickCity(c)} />)}
+        {query && cities.length === 0 ? <Body>Nenhuma cidade de {stateName(ufPick)} com esse nome. Confira a grafia.</Body> : null}
+      </>) : null}
 
       {step === 6 ? <>
         <Heading>Quanto você tem para investir?</Heading>
@@ -221,4 +227,12 @@ export default function OnboardingScreen() {
       {AUTO.has(step) || step === 3 || step === 5 ? <Text style={{ textAlign: "center", color: palette.faint, fontSize: 13 }}>Toque numa opção para seguir</Text> : null}
     </Page></ScrollView>
   </View>;
+}
+
+function CityRow({ city, onPress, showUf = false }: { city: City; onPress: () => void; showUf?: boolean }) {
+  return <Pressable onPress={onPress} accessibilityRole="button" style={{ flexDirection: "row", alignItems: "center", gap: 12, minHeight: 52, paddingHorizontal: 6, borderBottomWidth: 1, borderBottomColor: palette.line }}>
+    <Ionicons name="location" size={18} color={palette.brandText} />
+    <Text style={{ fontSize: 16, color: palette.ink, flex: 1 }}>{city.name}{showUf ? <Text style={{ color: palette.muted }}> · {city.uf}</Text> : null}</Text>
+    <Ionicons name="chevron-forward" size={16} color={palette.faint} />
+  </Pressable>;
 }

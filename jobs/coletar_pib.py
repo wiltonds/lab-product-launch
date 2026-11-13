@@ -17,7 +17,9 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from lab.config import PROC  # noqa: E402
 
-URL = "https://apisidra.ibge.gov.br/values/t/5938/n6/all/v/all/p/last"
+# v/37 = PIB a preços correntes. Pedir v/all para todos os municípios passa do limite de
+# valores por consulta do SIDRA (erro 400), então pedimos só a variável que usamos.
+URL = "https://apisidra.ibge.gov.br/values/t/5938/n6/all/v/37/p/last"
 ROTULO = "Produto Interno Bruto a preços correntes"
 
 
@@ -26,7 +28,8 @@ def parse_pib(dados: list[dict]) -> pd.DataFrame:
     chave = lambda texto: next(k for k, v in rotulos.items() if v == texto)  # noqa: E731
     k_cod, k_var, k_ano = chave("Município (Código)"), chave("Variável"), chave("Ano")
     df = pd.DataFrame(linhas)
-    df = df[df[k_var].str.startswith(ROTULO)]
+    certo = df[df[k_var].str.startswith(ROTULO)]
+    df = certo if len(certo) else df   # se o IBGE mudar o rótulo, fica a única variável pedida
     out = pd.DataFrame({"cod_ibge": df[k_cod].astype(str),
                         "ano": pd.to_numeric(df[k_ano], errors="coerce").astype("Int64"),
                         "pib_mil_reais": pd.to_numeric(df["V"], errors="coerce")})

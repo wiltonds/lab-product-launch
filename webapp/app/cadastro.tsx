@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View, type TextInputProps } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -6,7 +6,7 @@ import { Body, Button, Heading, Page, palette } from "@/components/lab-ui";
 import { useAppData } from "@/hooks/use-app-data";
 import { savePerfil, sendCode, supabaseConfigured, verifyCode } from "@/shared/supabase";
 import { maskWhatsapp, normalizeEmail, onlyDigits, suggestEmail, validateCode, validateEmail, validateName, validateWhatsapp } from "@/shared/validation";
-import { searchCities, type City } from "@/shared/cities";
+import { findCity, searchCities, ufFromWhatsapp, type City } from "@/shared/cities";
 
 function Input({ label, error, icon, ...props }: TextInputProps & { label: string; error?: string | null; icon: keyof typeof Ionicons.glyphMap }) {
   return <View style={{ gap: 6 }}>
@@ -30,8 +30,7 @@ export default function CadastroScreen() {
   const [email, setEmail] = useState(data.profile.email);
   const [city, setCity] = useState(data.idea.municipality || data.profile.homeCity);
   const [cityOpen, setCityOpen] = useState(false);
-  const [picked, setPicked] = useState<City | null>(data.idea.municipalityCode ? { code: data.idea.municipalityCode, name: data.idea.municipality, uf: data.idea.municipalityUf || "AL" } : null);
-  const [cities, setCities] = useState<City[]>([]);
+  const [picked, setPicked] = useState<City | null>(findCity(data.idea.municipalityCode) ?? null);
   const [consent, setConsent] = useState(data.profile.marketingConsent);
   const [code, setCode] = useState("");
   const [touched, setTouched] = useState(false);
@@ -46,12 +45,8 @@ export default function CadastroScreen() {
     city: mode === "criar" && !cityMatch ? "Digite e escolha a sua cidade na lista." : null,
   };
   const valid = !Object.values(errors).some(Boolean);
-  useEffect(() => {
-    if (!cityOpen || city.trim().length < 2) { setCities([]); return; }
-    const ctrl = new AbortController();
-    const t = setTimeout(() => { searchCities(city, ctrl.signal, 5).then((r) => setCities(r.cities)).catch(() => undefined); }, 250);
-    return () => { clearTimeout(t); ctrl.abort(); };
-  }, [city, cityOpen]);
+  // Cidades do estado do DDD aparecem primeiro (82 → Alagoas, 81 → Pernambuco...).
+  const cities = useMemo(() => (cityOpen && city.trim().length >= 2 ? searchCities(city, { preferUf: ufFromWhatsapp(whatsapp), limit: 5 }) : []), [city, cityOpen, whatsapp]);
   const fix = suggestEmail(email);
   const show = (e: string | null) => (touched ? e : null);
 

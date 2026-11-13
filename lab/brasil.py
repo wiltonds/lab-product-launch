@@ -99,6 +99,11 @@ APELIDOS = {  # grafias da Receita que não batem com o IBGE (uf, nome Receita n
     ("PE", "IGUARACI"): "IGUARACY",
     ("CE", "ITAPAGE"): "ITAPAJE",
     ("BA", "SANTA TERESINHA"): "SANTA TEREZINHA",
+    ("RJ", "PARATI"): "PARATY",
+    ("RN", "BOA SAUDE"): "JANUARIO CICCO",
+    ("RN", "ARES"): "AREZ",
+    ("RR", "SAO LUIZ"): "SAO LUIZ DO ANAUA",
+    ("TO", "FORTALEZA DO TABOCAO"): "TABOCAO",
 }
 
 
