@@ -13,7 +13,7 @@ export default function PrivacyScreen() {
       const createdAt = new Date().toISOString();
       const next = await update({ privacyRequests: [...data.privacyRequests, { type: "export", createdAt, status: "solicitada" }] });
       const completeData = await getLatestData(next);
-      await Share.share({ title: "Exportação — Lab do Meu Negócio", message: JSON.stringify(completeData, null, 2) });
+      await Share.share({ title: "Exportação — Vinga", message: JSON.stringify(completeData, null, 2) });
     } catch {
       notify("Exportação indisponível", "Não foi possível carregar todos os dados da conta. Nenhum arquivo incompleto foi compartilhado; tente novamente.");
     }
