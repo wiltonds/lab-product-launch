@@ -23,7 +23,8 @@ st.set_page_config(page_title="Lab_Product_Launch · Alagoas", page_icon="📊",
 # ------------------------------------------------------------------ dados
 @st.cache_data(show_spinner="Carregando dados...")
 def carregar() -> dict:
-    if (PUB / "meta.json").exists():
+    # Painel interno antigo: lê o formato 1 (só AL). Com o formato 2 (Brasil, jobs/publicar_brasil.py) cai na demo.
+    if (PUB / "fluxo.parquet").exists() and (PUB / "vida.parquet").exists():
         d = {k: pd.read_parquet(PUB / f"{k}.parquet") for k in ("ativos", "fluxo", "vida")}
         for k in ("populacao", "cnaes"):
             d[k] = pd.read_parquet(PUB / f"{k}.parquet") if (PUB / f"{k}.parquet").exists() else None

@@ -60,3 +60,49 @@ def agregados() -> dict:
             "populacao": pop, "cnaes": CNAES,
             "meta": {"uf": "demo", "edicao": "demonstração", "data_referencia": str(REF.date()),
                      "versao": "demo", "fontes": {"todos": "dados sintéticos gerados por lab/demo.py"}}}
+
+
+# ---------------------------------------------------------------- Brasil (formato 2), também sintético
+
+UFS_DEMO = {"AL": "27", "SP": "35", "PR": "41"}
+
+
+def brasil_sintetico(pasta, por_uf: int = 20, seed: int = 11):
+    """Cria data/processed/<mes>/estab/uf=XX.parquet SINTÉTICOS em `pasta` e devolve
+    (municipios_receita, populacao, pib). Cidades inventadas, só para testar o pipeline."""
+    from pathlib import Path
+
+    rng = np.random.default_rng(seed)
+    pasta = Path(pasta)
+    pasta.mkdir(parents=True, exist_ok=True)
+    rec, pop, pib = [], [], []
+    cod_rec = 1000
+    for uf, cu in UFS_DEMO.items():
+        linhas = []
+        for i in range(por_uf):
+            cod = f"{cu}{i:05d}"
+            nome = f"Cidade {uf} {i:02d}"
+            habitantes = int(np.exp(rng.uniform(np.log(4_000), np.log(400_000))))
+            renda = rng.lognormal(10, 0.3) * (1.4 if uf != "AL" else 1.0)
+            cod_rec += 1
+            rec.append({"codigo": str(cod_rec), "descricao": nome.upper()})
+            pop.append({"cod_ibge": cod, "municipio": nome, "uf": uf, "ano": 2025, "populacao": habitantes})
+            pib.append({"cod_ibge": cod, "ano": 2023, "pib_mil_reais": habitantes * renda / 1000})
+            for cnae, (taxa, escala, forma) in PARAM.items():
+                for ano in range(2012, 2027):
+                    n = rng.poisson(taxa * habitantes / 1e4 * (0.7 if ano == 2026 else 1) * (renda / 25_000) ** 0.5)
+                    if n == 0:
+                        continue
+                    dia = rng.integers(0, 270 if ano == 2026 else 365, n)
+                    inicio = pd.Timestamp(f"{ano}-01-01") + pd.to_timedelta(dia, unit="D")
+                    fim = inicio + pd.to_timedelta(escala * rng.weibull(forma, n) * 30.44, unit="D")
+                    fechou = fim <= REF
+                    sit = np.where(fechou & (rng.random(n) < .25), 4, np.where(fechou, 8, 2))
+                    linhas.append(pd.DataFrame({
+                        "matriz_filial": np.where(rng.random(n) < .06, 2, 1).astype("int8"),
+                        "situacao": sit.astype("int8"),
+                        "data_situacao": pd.Series(fim).where(fechou, pd.NaT).values.astype("datetime64[s]"),
+                        "data_inicio": inicio.values.astype("datetime64[s]"),
+                        "cnae_principal": np.int32(int(cnae)), "municipio_receita": np.int32(cod_rec)}))
+        pd.concat(linhas, ignore_index=True).to_parquet(pasta / f"uf={uf}.parquet", index=False)
+    return pd.DataFrame(rec), pd.DataFrame(pop), pd.DataFrame(pib)

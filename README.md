@@ -18,19 +18,20 @@ streamlit run app.py          # abre em modo demonstração (dados sintéticos)
 pytest -q                     # testes
 ```
 
-## Carregar os dados reais de Alagoas
+## Carregar os dados reais (Brasil inteiro)
+
+Na prática quem roda é o GitHub Actions (`.github/workflows/atualizar-dados.yml`), todo dia 20.
+Para rodar na mão (precisa de ~15 GB livres):
 
 ```bash
-python jobs/baixar_cnpj.py --mes 2026-10        # ~6 GB da Receita Federal
-python jobs/extrair_al.py --mes 2026-10         # recorta AL, todas as situações, sem contatos
-python jobs/coletar_populacao.py                # IBGE/SIDRA
-python jobs/auditar_fontes.py --mes 2026-10     # Etapa A: relatório em data/auditoria/
-python jobs/publicar_agregados.py --mes 2026-10 # agregados que o app lê, em data/publicado/
-streamlit run app.py
+python jobs/baixar_cnpj.py --mes 2026-10         # ~6 GB da Receita Federal
+python jobs/extrair_brasil.py --mes 2026-10      # separa por UF, sem nome, endereço nem contato
+python jobs/coletar_populacao.py                 # IBGE/SIDRA, 5.570 municípios
+python jobs/coletar_pib.py                       # IBGE/SIDRA, PIB dos municípios (opcional)
+python jobs/publicar_brasil.py --mes 2026-10     # modelos e agregados em data/publicado/
 ```
 
-Se o download da Receita falhar (o endereço muda de tempos em tempos), baixe
-os zips pelo navegador e rode `extrair_al.py --pasta <pasta dos zips>`.
+Como cada número é calculado, e os limites: [docs/metodologia.md](docs/metodologia.md).
 
 ## Publicar o app (Streamlit Community Cloud)
 

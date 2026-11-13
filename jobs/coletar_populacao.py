@@ -1,9 +1,10 @@
-"""coletar_populacao.py — População estimada dos municípios de AL (IBGE/SIDRA, tabela 6579).
+"""coletar_populacao.py — População estimada dos municípios (IBGE/SIDRA, tabela 6579).
 
-Grava data/processed/populacao.parquet com cod_ibge, municipio, ano, populacao.
+Grava data/processed/populacao.parquet com cod_ibge, municipio, uf, ano, populacao.
 
 Uso:
-    python jobs/coletar_populacao.py
+    python jobs/coletar_populacao.py            # Brasil inteiro (5.570 municípios)
+    python jobs/coletar_populacao.py --uf AL    # só uma UF
 """
 from __future__ import annotations
 
@@ -13,9 +14,13 @@ from pathlib import Path
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from lab.config import COD_UF_IBGE, PROC  # noqa: E402
+from lab.config import PROC  # noqa: E402
 
-URL = f"https://apisidra.ibge.gov.br/values/t/6579/n6/in%20n3%20{COD_UF_IBGE}/v/9324/p/last"
+BASE = "https://apisidra.ibge.gov.br/values/t/6579/{nivel}/v/9324/p/last"
+
+
+def url(cod_uf: str | None = None) -> str:
+    return BASE.format(nivel=f"n6/in%20n3%20{cod_uf}" if cod_uf else "n6/all")
 
 
 def parse_sidra(dados: list[dict]) -> pd.DataFrame:
@@ -28,6 +33,7 @@ def parse_sidra(dados: list[dict]) -> pd.DataFrame:
     out = pd.DataFrame({
         "cod_ibge": df[k_cod].astype(str),
         "municipio": df[k_nome].str.replace(r" - [A-Z]{2}$", "", regex=True),
+        "uf": df[k_nome].str.extract(r" - ([A-Z]{2})$", expand=False),
         "ano": pd.to_numeric(df[k_ano], errors="coerce").astype("Int64"),
         "populacao": pd.to_numeric(df[k_val], errors="coerce"),
     })
@@ -35,8 +41,14 @@ def parse_sidra(dados: list[dict]) -> pd.DataFrame:
 
 
 def main() -> None:
+    import argparse
+
     import requests
-    r = requests.get(URL, timeout=60)
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--uf", help="sigla da UF; vazio = Brasil inteiro")
+    a = ap.parse_args()
+    from lab.brasil import UFS
+    r = requests.get(url(UFS[a.uf] if a.uf else None), timeout=180)
     r.raise_for_status()
     df = parse_sidra(r.json())
     PROC.mkdir(parents=True, exist_ok=True)

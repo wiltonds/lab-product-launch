@@ -12,7 +12,7 @@
 export type Confidence = "OBSERVADO" | "ESTIMADO";
 
 export type InsightSignal = {
-  id: "concorrencia" | "sobrevivencia" | "demanda" | string;
+  id: "concorrencia" | "espaco" | "sobrevivencia" | "demanda" | string;
   title: string;            // ex.: "Concorrência"
   verdict: "favoravel" | "atencao" | "risco" | "neutro";
   headline: string;         // ex.: "1 barbearia para cada 2.100 moradores"
@@ -38,8 +38,9 @@ export type InsightsState =
   | { status: "ready"; data: MunicipalInsights };
 
 /** Os três blocos que o painel reserva para os dados do município. */
-export const PLANNED_SIGNALS: { id: string; title: string; question: string; icon: "storefront-outline" | "pulse-outline" | "people-outline" }[] = [
+export const PLANNED_SIGNALS: { id: string; title: string; question: string; icon: "storefront-outline" | "analytics-outline" | "pulse-outline" | "people-outline" }[] = [
   { id: "concorrencia", title: "Concorrência", question: "Quantos negócios parecidos já existem por morador?", icon: "storefront-outline" },
+  { id: "espaco", title: "Espaço no mercado", question: "Quantos negócios uma cidade como a sua costuma ter?", icon: "analytics-outline" },
   { id: "sobrevivencia", title: "Sobrevivência", question: "Quantos negócios desse tipo seguem abertos depois de 2 anos?", icon: "pulse-outline" },
   { id: "demanda", title: "Movimento do setor", question: "Mais negócios desse tipo estão abrindo ou fechando?", icon: "people-outline" },
 ];
