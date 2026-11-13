@@ -30,10 +30,18 @@ from lab.brasil import NOME_UF  # noqa: E402
 from lab.estatistica import esperado, faixa_nb, matriz  # noqa: E402
 from lab.receita import normalizar_nome  # noqa: E402
 
+try:   # Arrow devolve a memória ao sistema logo após ler (o plano gratuito do Render tem 512 MB)
+    import pyarrow as _pa
+    _pa.jemalloc_set_decay_ms(0)
+except Exception:  # noqa: BLE001
+    pass
+
 PUB = Path(os.environ.get("LAB_PUBLICADO", RAIZ / "data" / "publicado"))
 ATIVIDADES = json.loads((Path(__file__).parent / "atividades.json").read_text(encoding="utf-8"))["atividades"]
-VERSAO = "0.3.0"
+VERSAO = "0.3.1"
 TABELAS = ("municipios", "ativos", "movimento", "sobrevivencia", "sobrevivencia_uf", "saturacao")
+# Só as colunas usadas: o plano gratuito do Render tem 512 MB de memória.
+from lab.compacto import COLUNAS, GRANDES  # noqa: E402
 
 app = FastAPI(title="Vinga — API de dados", version=VERSAO)
 app.add_middleware(CORSMiddleware, allow_origins=[o.strip() for o in os.environ.get("CORS_ORIGINS", "*").split(",") if o.strip()],
@@ -48,10 +56,46 @@ def dados() -> dict:
     m = json.loads(meta.read_text(encoding="utf-8"))
     if m.get("formato") != 2:
         raise HTTPException(503, "Agregados no formato antigo (só Alagoas). Rode jobs/publicar_brasil.py.")
-    d = {k: pd.read_parquet(PUB / f"{k}.parquet") for k in TABELAS}
+    import gc
+    d = {}
+    for k in TABELAS:   # uma tabela por vez, já compactada, para o pico de memória ficar baixo
+        t = _ler(PUB / f"{k}.parquet", COLUNAS.get(k), grande=k in GRANDES)
+        d[k] = _compactar(t) if k in GRANDES else t
+        del t
+        gc.collect()
     d["cnaes"] = pd.read_parquet(PUB / "cnaes.parquet") if (PUB / "cnaes.parquet").exists() else None
     d["meta"] = m
-    return preparar(d)
+    d = preparar(d)
+    gc.collect()
+    try:   # devolve ao sistema a memória que sobrou da leitura
+        import ctypes
+        ctypes.CDLL("libc.so.6").malloc_trim(0)
+    except Exception:  # noqa: BLE001
+        pass
+    return d
+
+
+def _ler(caminho: Path, colunas: list[str] | None, grande: bool) -> pd.DataFrame:
+    if not grande:
+        return pd.read_parquet(caminho, columns=colunas)
+    t = pd.read_parquet(caminho, columns=colunas)
+    if t["cod_ibge"].dtype.kind in "OSU" or str(t["cod_ibge"].dtype).startswith("string"):   # edição antiga, não compacta
+        from lab.compacto import compactar
+        t = compactar(t, caminho.stem)
+    return t
+
+
+def _compactar(t: pd.DataFrame) -> pd.DataFrame:
+    """Código IBGE e CNAE como inteiros, números em 32 bits, índice pelo município (busca rápida e pouca memória)."""
+    if t.index.name == "cod_ibge":
+        return t
+    if t["cod_ibge"].dtype == "int32" and t["cnae_principal"].dtype == "int32":
+        return t.set_index("cod_ibge")
+    t["cod_ibge"] = pd.to_numeric(t["cod_ibge"]).astype("int32")
+    t["cnae_principal"] = t["cnae_principal"].astype("int32")
+    for c in t.columns.drop(["cod_ibge", "cnae_principal"]):
+        t[c] = t[c].astype("float32") if t[c].dtype.kind == "f" else t[c].astype("int32")
+    return t.set_index("cod_ibge").sort_index(kind="stable")
 
 
 def preparar(d: dict) -> dict:
@@ -63,15 +107,25 @@ def preparar(d: dict) -> dict:
     d["X"] = matriz(mun).set_index("cod_ibge")
     d["pop_uf"] = mun.groupby("uf")["populacao"].sum()
     for k in ("ativos", "movimento", "sobrevivencia"):
-        t = d[k].copy()
-        t["cod_ibge"] = t["cod_ibge"].astype(str)
-        t["cnae_principal"] = t["cnae_principal"].astype(int)
-        t["uf"] = t["cod_ibge"].map(mun.set_index("cod_ibge")["uf"])
-        d[k] = t
+        d[k] = _compactar(d[k])
+    sigla = {int(c[:2]): u for c, u in zip(mun["cod_ibge"], mun["uf"])}
+    for k in ("ativos", "movimento"):   # totais por UF × CNAE, calculados uma vez (sem copiar a tabela)
+        t = d[k]
+        uf_num = pd.Series(t.index.values // 100000, index=t.index).map(sigla).values
+        d[k + "_uf"] = t.groupby([uf_num, t["cnae_principal"].values]).sum(numeric_only=True).drop(columns="cnae_principal", errors="ignore")
+        d[k + "_uf"].index.names = ["uf", "cnae_principal"]
     d["sobrevivencia_uf"] = d["sobrevivencia_uf"].assign(cnae_principal=lambda x: x["cnae_principal"].astype(int))
     d["saturacao"] = d["saturacao"].assign(cnae_principal=lambda x: x["cnae_principal"].astype(int)).set_index("cnae_principal")
     d["ref"] = pd.Timestamp(d["meta"]["data_referencia"])
     return d
+
+
+def _linhas(t: pd.DataFrame, cod: str, cnaes: list[int]) -> pd.DataFrame:
+    c = int(cod)
+    if c not in t.index:
+        return t.iloc[0:0]
+    s = t.loc[[c]]
+    return s[s["cnae_principal"].isin(cnaes)]
 
 
 def _num(n: float) -> str:
@@ -92,19 +146,20 @@ def _fonte(d: dict, *quais: str) -> str:
     return "; ".join(f[q] for q in quais if q in f) + f" — referência {d['meta']['data_referencia']}"
 
 
-def _soma(t: pd.DataFrame, cnaes: list[int], col: str, cod: str | None = None, uf: str | None = None) -> int:
-    s = t[t["cnae_principal"].isin(cnaes)]
+def _soma(d: dict, tabela: str, cnaes: list[int], col: str, cod: str | None = None, uf: str | None = None) -> int:
     if cod is not None:
-        s = s[s["cod_ibge"] == cod]
-    if uf is not None:
-        s = s[s["uf"] == uf]
-    return int(s[col].sum())
+        return int(_linhas(d[tabela], cod, cnaes)[col].sum())
+    t = d[tabela + "_uf"]
+    if uf not in t.index.get_level_values(0):
+        return 0
+    s = t.loc[uf]
+    return int(s[s.index.isin(cnaes)][col].sum())
 
 
 def concorrencia(d, ativ, mun) -> dict:
     cn, uf = ativ["_cnaes"], mun["uf"]
-    loc = _soma(d["ativos"], cn, "ativos", cod=mun["codigo"])
-    tot_uf = _soma(d["ativos"], cn, "ativos", uf=uf)
+    loc = _soma(d, "ativos", cn, "ativos", cod=mun["codigo"])
+    tot_uf = _soma(d, "ativos", cn, "ativos", uf=uf)
     base = {"id": "concorrencia", "title": "Concorrência", "confidence": "OBSERVADO", "sampleSize": loc,
             "source": _fonte(d, "cnpj", "populacao")}
     if loc == 0:
@@ -135,7 +190,7 @@ def espaco(d, ativ, mun) -> dict:
     mu = sum(esperado(d["saturacao"].loc[c], x) for c in cn)
     alpha = float(d["saturacao"].loc[cn[0], "alpha"])
     lo, hi = faixa_nb(mu, alpha)
-    obs = _soma(d["ativos"], cn, "ativos", cod=mun["codigo"])
+    obs = _soma(d, "ativos", cn, "ativos", cod=mun["codigo"])
     v = "favoravel" if obs < lo else "atencao" if obs > hi else "neutro"
     detalhe = {"favoravel": "Menos do que o esperado para uma cidade desse tamanho e renda: pode haver espaço, ou pouca procura. Vale confirmar na rua.",
                "atencao": "Mais do que o esperado para uma cidade desse tamanho e renda: o mercado tende a ser mais disputado.",
@@ -156,8 +211,7 @@ def sobrevivencia(d, ativ, mun) -> dict:
     if su.empty or su["n"].sum() == 0:
         return base | {"verdict": "neutro", "headline": "Sem aberturas suficientes para medir", "sampleSize": 0}
     s_uf = float((su["s"] * su["n"]).sum() / su["n"].sum())
-    linha = d["sobrevivencia"]
-    linha = linha[(linha["cod_ibge"] == mun["codigo"]) & linha["cnae_principal"].isin(cn)]
+    linha = _linhas(d["sobrevivencia"], mun["codigo"], cn)
     if linha.empty:
         return base | {"verdict": "neutro", "sampleSize": int(su["n"].sum()),
                        "headline": f"Em {nome_uf}, {_pct(s_uf)} seguem abertos após 2 anos",
@@ -176,13 +230,13 @@ def sobrevivencia(d, ativ, mun) -> dict:
 
 def movimento(d, ativ, mun) -> dict:
     cn, uf, nome_uf = ativ["_cnaes"], mun["uf"], NOME_UF.get(mun["uf"], mun["uf"])
-    ab = _soma(d["movimento"], cn, "aberturas", cod=mun["codigo"])
-    fe = _soma(d["movimento"], cn, "fechamentos", cod=mun["codigo"])
+    ab = _soma(d, "movimento", cn, "aberturas", cod=mun["codigo"])
+    fe = _soma(d, "movimento", cn, "fechamentos", cod=mun["codigo"])
     base = {"id": "demanda", "title": "Movimento do setor", "confidence": "OBSERVADO", "sampleSize": ab + fe,
             "source": _fonte(d, "cnpj")}
     if ab + fe == 0:
         return base | {"verdict": "neutro", "headline": f"Nenhuma abertura ou fechamento de {ativ['plural']} nos últimos 3 anos"}
-    ab_uf, fe_uf = _soma(d["movimento"], cn, "aberturas", uf=uf), _soma(d["movimento"], cn, "fechamentos", uf=uf)
+    ab_uf, fe_uf = _soma(d, "movimento", cn, "aberturas", uf=uf), _soma(d, "movimento", cn, "fechamentos", uf=uf)
     taxa, taxa_uf = ab / max(fe, 1), ab_uf / max(fe_uf, 1)
     v = "favoravel" if taxa >= taxa_uf * 1.2 and ab > fe else "atencao" if fe >= ab or taxa <= taxa_uf * 0.8 else "neutro"
     return base | {"verdict": v, "headline": f"{_num(ab)} abriram e {_num(fe)} fecharam nos últimos 3 anos",
@@ -204,23 +258,22 @@ def notas_de_mercado(d, ativ, mun) -> dict:
     """
     import math
     cn, uf = ativ["_cnaes"], mun["uf"]
-    obs = _soma(d["ativos"], cn, "ativos", cod=mun["codigo"])
+    obs = _soma(d, "ativos", cn, "ativos", cod=mun["codigo"])
     com_modelo = [c for c in cn if c in d["saturacao"].index]
     esp = None
     if com_modelo and mun["codigo"] in d["X"].index:
         mu = sum(esperado(d["saturacao"].loc[c], d["X"].loc[mun["codigo"]]) for c in com_modelo)
         esp = 60 - 40 * math.log2((obs + 1) / (mu + 1))
     else:
-        tot_uf, pop_uf = _soma(d["ativos"], cn, "ativos", uf=uf), d["pop_uf"].get(uf, 0)
+        tot_uf, pop_uf = _soma(d, "ativos", cn, "ativos", uf=uf), d["pop_uf"].get(uf, 0)
         if tot_uf and pop_uf and mun["populacao"]:
             razao = (obs / mun["populacao"]) / (tot_uf / pop_uf)
             esp = 60 - 40 * math.log2(max(razao, 0.01))
-    ab = _soma(d["movimento"], cn, "aberturas", cod=mun["codigo"])
-    fe = _soma(d["movimento"], cn, "fechamentos", cod=mun["codigo"])
+    ab = _soma(d, "movimento", cn, "aberturas", cod=mun["codigo"])
+    fe = _soma(d, "movimento", cn, "fechamentos", cod=mun["codigo"])
     mov = 50 + 25 * math.log2((ab + 1) / (fe + 1)) if ab + fe > 0 else None
     mercado = None if esp is None else (esp if mov is None else 0.65 * esp + 0.35 * mov)
-    linha = d["sobrevivencia"]
-    linha = linha[(linha["cod_ibge"] == mun["codigo"]) & linha["cnae_principal"].isin(cn)]
+    linha = _linhas(d["sobrevivencia"], mun["codigo"], cn)
     if len(linha):
         s = float((linha["s"] * linha["n"]).sum() / linha["n"].sum())
     else:

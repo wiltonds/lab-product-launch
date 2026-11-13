@@ -17,7 +17,6 @@ import warnings
 
 import numpy as np
 import pandas as pd
-from scipy import stats
 
 M_MIN, M_MAX = 5.0, 2000.0
 
@@ -56,6 +55,7 @@ def sobrevivencia_bayes(sob: pd.DataFrame, nivel: float = 0.90) -> tuple[pd.Data
       ic_inf/ic_sup do posterior Beta, peso_local = n/(n+m)
     A UF também é puxada para o Brasil do mesmo jeito (UF pequena, CNAE raro).
     """
+    from scipy import stats   # só no processamento mensal; a API não precisa do scipy (memória)
     linhas_mun, linhas_uf = [], []
     for cnae, g in sob.groupby("cnae_principal"):
         K, N = g["k"].sum(), g["n"].sum()
@@ -169,9 +169,19 @@ def esperado(coef: pd.Series, x: pd.Series) -> float:
 
 
 def faixa_nb(mu: float, alpha: float, baixo: float = 0.10, alto: float = 0.90) -> tuple[int, int]:
-    """Faixa de 80% de uma Binomial Negativa com média μ e dispersão α."""
-    if alpha <= 0:
-        return int(stats.poisson.ppf(baixo, mu)), int(stats.poisson.ppf(alto, mu))
-    r = 1 / alpha
-    p = r / (r + mu)
-    return int(stats.nbinom.ppf(baixo, r, p)), int(stats.nbinom.ppf(alto, r, p))
+    """Faixa de 80% de uma Binomial Negativa com média μ e dispersão α (sem scipy: pmf por recorrência)."""
+    mu = max(float(mu), 1e-9)
+    if alpha <= 1e-9:   # Poisson
+        r_log = None
+    sd = np.sqrt(mu + max(alpha, 0.0) * mu * mu)
+    k = np.arange(0, int(mu + 12 * sd + 50), dtype=float)
+    if alpha <= 1e-9:
+        logp = -mu + np.concatenate([[0.0], np.cumsum(np.log(mu) - np.log(k[1:]))])
+    else:
+        r = 1.0 / alpha
+        logp0 = r * (np.log(r) - np.log(r + mu))
+        passos = np.log((k[:-1] + r) / (k[:-1] + 1)) + np.log(mu / (r + mu))
+        logp = logp0 + np.concatenate([[0.0], np.cumsum(passos)])
+    cdf = np.cumsum(np.exp(logp - logp.max()))
+    cdf /= cdf[-1]
+    return int(np.searchsorted(cdf, baixo)), int(np.searchsorted(cdf, alto))
