@@ -10,7 +10,7 @@ from pathlib import Path
 import pandas as pd
 import pyarrow.parquet as pq
 
-from lab import brasil, estatistica
+from lab import brasil, estatistica, validacao
 
 FORMATO = 2
 
@@ -47,7 +47,7 @@ def montar(pasta_estab: Path, muni_receita: pd.DataFrame, pop: pd.DataFrame, pib
            ref: pd.Timestamp | None = None, log=print) -> dict[str, pd.DataFrame]:
     muni = tabela_municipios(pop, pib)
     ref = ref or data_referencia(pasta_estab)
-    partes = {"ativos": [], "movimento": [], "sobrevivencia": []}
+    partes = {"ativos": [], "movimento": [], "sobrevivencia": [], "val_treino": [], "val_teste": []}
     ligacoes, sem_par, coortes = [], [], None
     for arq in sorted(pasta_estab.glob("uf=*.parquet")):
         uf = arq.stem.split("=")[1]
@@ -70,6 +70,12 @@ def montar(pasta_estab: Path, muni_receita: pd.DataFrame, pop: pd.DataFrame, pib
     log("Espaço no mercado (Binomial Negativa por CNAE)...")
     muni_mod = muni[muni["populacao"] > 0]
     out["saturacao"] = estatistica.ajustar_saturacao(out["ativos"], muni_mod)
+    log("Validação fora da amostra...")
+    tr, te = out.pop("val_treino"), out.pop("val_teste")
+    for t in (tr, te):
+        t["uf"] = brasil.uf_do_codigo(t["cod_ibge"])
+    out["_validacao"] = {"sobrevivencia": validacao.validar_sobrevivencia(tr, te),
+                         "espaco_no_mercado": validacao.validar_saturacao(out["ativos"], muni_mod, out["saturacao"])}
     out["municipios"] = muni
     out["ligacao"] = pd.concat(ligacoes, ignore_index=True)
     out["sem_par"] = pd.concat(sem_par, ignore_index=True)

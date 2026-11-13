@@ -175,10 +175,18 @@ def agregar_uf(est: pd.DataFrame, ligacao: pd.DataFrame, ref: pd.Timestamp) -> d
     sob = (c.assign(k=k.astype("int32")).groupby(chave)
            .agg(n=("k", "size"), k=("k", "sum")).reset_index())
 
-    for t in (ativos, mov, sob):
+    # Validação honesta (fora da amostra): treina com as 5 coortes anteriores e testa na mais recente.
+    def contagem(anos) -> pd.DataFrame:
+        c = df[df["data_inicio"].dt.year.isin(anos)]
+        meses = (c["data_situacao"] - c["data_inicio"]).dt.days / MES
+        k = c["situacao"].isin(FECHADA) & c["data_situacao"].notna() & (c["data_situacao"] <= ref) & (np.floor(meses) < HORIZONTE)
+        return c.assign(k=k.astype("int32")).groupby(chave).agg(n=("k", "size"), k=("k", "sum")).reset_index()
+    val_treino, val_teste = contagem(range(ult - COORTES, ult)), contagem([ult])
+
+    for t in (ativos, mov, sob, val_treino, val_teste):
         t["cod_ibge"] = t["cod_ibge"].astype(str)
         t["cnae_principal"] = t["cnae_principal"].astype("int32")
-    return {"ativos": ativos, "movimento": mov, "sobrevivencia": sob,
+    return {"ativos": ativos, "movimento": mov, "sobrevivencia": sob, "val_treino": val_treino, "val_teste": val_teste,
             "coortes": pd.DataFrame({"primeira": [coortes[0]], "ultima": [coortes[-1]]})}
 
 

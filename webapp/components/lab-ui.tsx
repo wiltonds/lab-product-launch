@@ -9,10 +9,10 @@ import { Ionicons } from "@expo/vector-icons";
  */
 export const palette = {
   // marca: energia (laranja) + confiança (azul-marinho) + destaque (amarelo)
-  brand: "#FF6B2C", brandDeep: "#14213D", brandSoft: "#FFF0E8", lime: "#FFC93C",
+  brand: "#FF6B2C", brandText: "#C2410C", brandDeep: "#14213D", brandSoft: "#FFF0E8", lime: "#FFC93C",
   navy: "#14213D", navySoft: "#E8ECF5", sky: "#3D7BFF", skySoft: "#E9F0FF",
   // texto e superfícies
-  ink: "#14213D", muted: "#5B6478", faint: "#9AA1B2",
+  ink: "#14213D", muted: "#5B6478", faint: "#646D82", // contraste mínimo 4,5:1 (WCAG)
   paper: "#F6F7FB", white: "#FFFFFF", line: "#E4E7EF",
   // estados
   green: "#12A150", greenSoft: "#E3F7EC", amber: "#C77700", amberSoft: "#FFF4D6",
@@ -42,11 +42,11 @@ export function Card({ children, style }: PropsWithChildren<{ style?: any }>) { 
 export function Button({ title, onPress, secondary = false, disabled = false, icon }: { title: string; onPress: () => void; secondary?: boolean; disabled?: boolean; icon?: keyof typeof Ionicons.glyphMap }) {
   return <Pressable accessibilityRole="button" onPress={onPress} disabled={disabled} style={({ pressed }) => [styles.button, secondary && styles.buttonSecondary, pressed && { transform: [{ scale: 0.985 }], opacity: 0.92 }, disabled && { opacity: 0.45 }]}>
     <Text style={[styles.buttonText, secondary && styles.buttonSecondaryText]}>{title}</Text>
-    {icon ? <Ionicons name={icon} size={18} color={secondary ? palette.brand : palette.white} /> : null}
+    {icon ? <Ionicons name={icon} size={18} color={secondary ? palette.brandText : palette.navy} /> : null}
   </Pressable>;
 }
 
-export function LinkButton({ title, onPress, color = palette.brand }: { title: string; onPress: () => void; color?: string }) {
+export function LinkButton({ title, onPress, color = palette.brandText }: { title: string; onPress: () => void; color?: string }) {
   return <Pressable accessibilityRole="button" onPress={onPress} hitSlop={10} style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
     <Text style={{ color, fontWeight: "700", fontSize: 15 }}>{title}</Text><Ionicons name="chevron-forward" size={16} color={color} />
   </Pressable>;
@@ -133,8 +133,8 @@ const styles = StyleSheet.create({
   body: {},
   card: { padding: 20, borderRadius: 24, backgroundColor: palette.white, gap: 14, ...shadow },
   button: { minHeight: 56, borderRadius: 999, paddingHorizontal: 22, backgroundColor: palette.brand, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8 },
-  buttonText: { color: palette.white, fontSize: 16, fontWeight: "800" },
-  buttonSecondary: { backgroundColor: palette.brandSoft }, buttonSecondaryText: { color: palette.brand },
+  buttonText: { color: palette.navy, fontSize: 16, fontWeight: "800" },
+  buttonSecondary: { backgroundColor: palette.brandSoft }, buttonSecondaryText: { color: palette.brandText },
   fieldWrap: { gap: 7 }, label: { color: palette.ink, fontSize: 14, fontWeight: "700" },
   input: { backgroundColor: palette.white, borderColor: palette.line, borderWidth: 1.5, borderRadius: 16, paddingHorizontal: 16, paddingVertical: 14, color: palette.ink, fontSize: 16, minHeight: 54 },
   helper: { color: palette.muted, fontSize: 13, lineHeight: 19 },

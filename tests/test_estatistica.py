@@ -66,3 +66,17 @@ def test_ligar_municipios_pela_uf_e_pelo_nome():
 def test_ultima_coorte_completa():
     assert brasil.ultima_coorte_completa(pd.Timestamp("2026-10-11")) == 2023
     assert brasil.ultima_coorte_completa(pd.Timestamp("2027-01-15")) == 2024
+
+
+def test_validacao_bayes_nao_perde_para_a_cidade_sozinha():
+    from lab import validacao
+    rng = np.random.default_rng(5)
+    linhas_tr, linhas_te = [], []
+    for i in range(80):
+        p = 0.3
+        n_tr, n_te = int(rng.integers(3, 60)), int(rng.integers(3, 30))
+        cod = f"27{i:05d}"
+        linhas_tr.append({"cod_ibge": cod, "uf": "AL", "cnae_principal": 1, "n": n_tr, "k": rng.binomial(n_tr, p)})
+        linhas_te.append({"cod_ibge": cod, "uf": "AL", "cnae_principal": 1, "n": n_te, "k": rng.binomial(n_te, p)})
+    v = validacao.validar_sobrevivencia(pd.DataFrame(linhas_tr), pd.DataFrame(linhas_te))
+    assert v["logloss"]["bayes_empirico"] <= v["logloss"]["cidade_sozinha"]

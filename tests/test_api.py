@@ -37,7 +37,7 @@ def _sinais(cliente, cod, ativ="lanchonete"):
 
 def test_contrato(cliente):
     s, j = _sinais(cliente, "2700000")
-    assert set(j) == {"municipalityCode", "activityId", "modelVersion", "generatedAt", "signals", "limitations"}
+    assert set(j) == {"municipalityCode", "activityId", "modelVersion", "generatedAt", "signals", "marketScore", "limitations"}
     assert set(s) == {"concorrencia", "espaco", "sobrevivencia", "demanda"}
     for x in s.values():
         assert x["verdict"] in {"favoravel", "atencao", "risco", "neutro"}
@@ -99,3 +99,12 @@ def test_formato_antigo_responde_503(tmp_path, monkeypatch):
     with pytest.raises(m.HTTPException) as e:
         REAL_DADOS.__wrapped__()
     assert e.value.status_code == 503
+
+
+def test_notas_do_indice(cliente):
+    _, j = _sinais(cliente, "2700005")
+    n = j["marketScore"]
+    assert set(n) == {"market", "survival"}
+    assert all(v is None or 0 <= v <= 100 for v in n.values())
+    _, j = _sinais(cliente, "2700005", "oficina")
+    assert j["marketScore"]["market"] is None   # sem dados não vira nota

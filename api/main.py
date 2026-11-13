@@ -190,6 +190,47 @@ def movimento(d, ativ, mun) -> dict:
                    "comparison": f"{nome_uf}: {_num(ab_uf)} abriram e {_num(fe_uf)} fecharam"}
 
 
+def _escala(x: float) -> int:
+    return int(round(min(100.0, max(0.0, x))))
+
+
+def notas_de_mercado(d, ativ, mun) -> dict:
+    """Partes do Índice Vinga que vêm dos dados públicos (0 a 100; maior = mais a favor).
+
+    mercado:       espaço no mercado (observado ÷ esperado pelo modelo; sem modelo, concorrência
+                   por morador ÷ média da UF) e movimento do setor (aberturas ÷ fechamentos).
+    sobrevivencia: sobrevivência em 24 meses (Bayes empírico); 40% vira 0 e 90% vira 100.
+    As fórmulas são simples de propósito e estão em docs/metodologia.md.
+    """
+    import math
+    cn, uf = ativ["_cnaes"], mun["uf"]
+    obs = _soma(d["ativos"], cn, "ativos", cod=mun["codigo"])
+    com_modelo = [c for c in cn if c in d["saturacao"].index]
+    esp = None
+    if com_modelo and mun["codigo"] in d["X"].index:
+        mu = sum(esperado(d["saturacao"].loc[c], d["X"].loc[mun["codigo"]]) for c in com_modelo)
+        esp = 60 - 40 * math.log2((obs + 1) / (mu + 1))
+    else:
+        tot_uf, pop_uf = _soma(d["ativos"], cn, "ativos", uf=uf), d["pop_uf"].get(uf, 0)
+        if tot_uf and pop_uf and mun["populacao"]:
+            razao = (obs / mun["populacao"]) / (tot_uf / pop_uf)
+            esp = 60 - 40 * math.log2(max(razao, 0.01))
+    ab = _soma(d["movimento"], cn, "aberturas", cod=mun["codigo"])
+    fe = _soma(d["movimento"], cn, "fechamentos", cod=mun["codigo"])
+    mov = 50 + 25 * math.log2((ab + 1) / (fe + 1)) if ab + fe > 0 else None
+    mercado = None if esp is None else (esp if mov is None else 0.65 * esp + 0.35 * mov)
+    linha = d["sobrevivencia"]
+    linha = linha[(linha["cod_ibge"] == mun["codigo"]) & linha["cnae_principal"].isin(cn)]
+    if len(linha):
+        s = float((linha["s"] * linha["n"]).sum() / linha["n"].sum())
+    else:
+        su = d["sobrevivencia_uf"]
+        su = su[(su["uf"] == uf) & su["cnae_principal"].isin(cn)]
+        s = float((su["s"] * su["n"]).sum() / su["n"].sum()) if su["n"].sum() else None
+    return {"market": None if mercado is None else _escala(mercado),
+            "survival": None if s is None else _escala((s - 0.4) / 0.5 * 100)}
+
+
 def _municipio(d: dict, codigo: str) -> dict:
     if codigo not in d["municipios"].index:
         raise HTTPException(404, "Município não encontrado.")
@@ -251,4 +292,5 @@ def insights(municipio: str = Query(..., min_length=7, max_length=7), atividade:
     return {"municipalityCode": municipio, "activityId": atividade,
             "modelVersion": f"{VERSAO} · edição {d['meta']['edicao']}", "generatedAt": d["meta"].get("gerado_em", ""),
             "signals": [concorrencia(d, ativ, mun), espaco(d, ativ, mun), sobrevivencia(d, ativ, mun), movimento(d, ativ, mun)],
+            "marketScore": notas_de_mercado(d, ativ, mun),
             "limitations": limitacoes}

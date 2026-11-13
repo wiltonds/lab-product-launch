@@ -61,6 +61,7 @@ def main() -> None:
             "municipios": int(r["municipios"]["cod_ibge"].nunique()),
             "municipios_com_cnpj": int(lig["cod_ibge"].nunique()),
             "modelos_saturacao": int(len(r["saturacao"])),
+            "validacao": r["_validacao"],
             "fontes": {
                 "cnpj": "Receita Federal, dados abertos do CNPJ",
                 "populacao": "IBGE/SIDRA, tabela 6579 (população estimada)",
@@ -80,6 +81,19 @@ def main() -> None:
     if len(sat):
         linhas += [f"- Modelo escolhido pelo AIC: {sat['modelo'].value_counts().to_dict()}",
                    f"- Pseudo-R² mediano: {sat['pseudo_r2'].median():.2f}"]
+    v = r["_validacao"]
+    vs, ve = v.get("sobrevivencia") or {}, v.get("espaco_no_mercado") or {}
+    linhas += ["", "## Validação fora da amostra", ""]
+    if vs:
+        ll, pp = vs["logloss"], vs["erro_pp"]
+        linhas += [f"Sobrevivência: treino nas 5 coortes anteriores, teste na mais recente ({vs['negocios_no_teste']:,} negócios).", "",
+                   "| Jeito de prever | Log-loss (menor = melhor) | Erro médio (p.p.) |", "| --- | --- | --- |"]
+        linhas += [f"| {nome} | {ll[k]:.4f} | {('—' if pp[k] is None else f'{pp[k]:.1f}')} |"
+                   for k, nome in (("cidade_sozinha", "Só a cidade"), ("uf", "Só a UF"), ("bayes_empirico", "Bayes empírico (usado no app)"))]
+    if ve:
+        linhas += ["", f"Espaço no mercado: validação cruzada em 5 partes, {ve['cnaes_testados']} atividades. "
+                   f"Erro mediano do modelo {ve['erro_log_modelo']:.3f} contra {ve['erro_log_proporcional']:.3f} da regra proporcional à população; "
+                   f"o modelo ganha em {ve['cnaes_em_que_o_modelo_ganha']} de {ve['cnaes_testados']}."]
     if len(sem):
         linhas += ["", "## Sem par", "", "| UF | Código Receita | Nome |", "| --- | --- | --- |"]
         linhas += [f"| {s.uf} | {s.municipio_receita} | {s.nome_receita} |" for s in sem.itertuples()]
