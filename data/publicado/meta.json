@@ -10,11 +10,33 @@
     2023
   ],
   "municipios": 5571,
-  "municipios_com_cnpj": 5566,
-  "modelos_saturacao": 911,
+  "municipios_com_cnpj": 5571,
+  "modelos_saturacao": 1008,
+  "validacao": {
+    "sobrevivencia": {
+      "negocios_no_teste": 3980468,
+      "celulas": 530751,
+      "logloss": {
+        "cidade_sozinha": 0.6349767728954232,
+        "uf": 0.5571645196116907,
+        "bayes_empirico": 0.5570317298172314
+      },
+      "erro_pp": {
+        "cidade_sozinha": 7.6052359560395955,
+        "uf": 7.394004743560768,
+        "bayes_empirico": 7.423864160361582
+      }
+    },
+    "espaco_no_mercado": {
+      "cnaes_testados": 40,
+      "erro_log_modelo": 0.4957679033326372,
+      "erro_log_proporcional": 1.042253837725268,
+      "cnaes_em_que_o_modelo_ganha": 40
+    }
+  },
   "fontes": {
     "cnpj": "Receita Federal, dados abertos do CNPJ",
     "populacao": "IBGE/SIDRA, tabela 6579 (população estimada)",
-    "pib": "indisponível nesta edição"
+    "pib": "IBGE/SIDRA, tabela 5938 (PIB dos municípios)"
   }
 }
