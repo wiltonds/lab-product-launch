@@ -1,11 +1,20 @@
 {
-  "uf": "AL",
+  "formato": 2,
+  "cobertura": "BR",
   "edicao": "2026-10",
   "data_referencia": "2026-10-11",
-  "gerado_em": "2026-11-11",
-  "versao": "0.1.0",
+  "gerado_em": "2026-11-13",
+  "versao": "0.3.0",
+  "coortes_sobrevivencia": [
+    2019,
+    2023
+  ],
+  "municipios": 5571,
+  "municipios_com_cnpj": 5566,
+  "modelos_saturacao": 911,
   "fontes": {
-    "cnpj": "Receita Federal, dados abertos do CNPJ (Estabelecimentos, Municípios, CNAEs)",
-    "populacao": "IBGE/SIDRA, tabela 6579 (população estimada)"
+    "cnpj": "Receita Federal, dados abertos do CNPJ",
+    "populacao": "IBGE/SIDRA, tabela 6579 (população estimada)",
+    "pib": "indisponível nesta edição"
   }
 }

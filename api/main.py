@@ -1,12 +1,12 @@
-"""API do Lab do Meu Negócio — dados do município para o web app.
+"""API do Vinga — dados do município para o web app (Brasil inteiro, formato 2).
 
-Lê os agregados de data/publicado/ (jobs/publicar_agregados.py) e usa os mesmos
-módulos do motor (lab/), então o número da API é o mesmo do painel Streamlit.
+Lê os agregados de data/publicado/ (jobs/publicar_brasil.py) e usa os modelos de lab/estatistica.py.
 
 Rodar:  uvicorn api.main:app --reload
 Rotas:
     GET /health
     GET /v1/atividades
+    GET /v1/municipios?busca=<nome>          busca de cidade em todo o Brasil
     GET /v1/insights?municipio=<código IBGE>&atividade=<id do app>
 
 Contrato de resposta: shared/insights.ts do app (MunicipalInsights).
@@ -26,43 +26,50 @@ from fastapi.middleware.cors import CORSMiddleware
 
 RAIZ = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(RAIZ))
-from lab.config import N_MIN_COORTE  # noqa: E402
+from lab.brasil import NOME_UF  # noqa: E402
+from lab.estatistica import esperado, faixa_nb, matriz  # noqa: E402
 from lab.receita import normalizar_nome  # noqa: E402
-from lab.sobrevivencia import MES, curva_km, sobrevivencia_em  # noqa: E402
 
 PUB = Path(os.environ.get("LAB_PUBLICADO", RAIZ / "data" / "publicado"))
 ATIVIDADES = json.loads((Path(__file__).parent / "atividades.json").read_text(encoding="utf-8"))["atividades"]
-EVENTO = "baixada_ou_inapta"   # definição ampla: inapta costuma ser negócio abandonado
-HORIZONTE = 24                 # meses
-COORTES = 5                    # quantas coortes completas entram no cálculo
-VERSAO = "0.2.0"
+VERSAO = "0.3.0"
+TABELAS = ("municipios", "ativos", "movimento", "sobrevivencia", "sobrevivencia_uf", "saturacao")
 
-app = FastAPI(title="Lab do Meu Negócio — API de dados", version=VERSAO)
+app = FastAPI(title="Vinga — API de dados", version=VERSAO)
 app.add_middleware(CORSMiddleware, allow_origins=[o.strip() for o in os.environ.get("CORS_ORIGINS", "*").split(",") if o.strip()],
                    allow_methods=["GET"], allow_headers=["*"])
 
 
 @lru_cache(maxsize=1)
 def dados() -> dict:
-    if not (PUB / "meta.json").exists():
+    meta = PUB / "meta.json"
+    if not meta.exists():
         raise HTTPException(503, "Agregados ainda não publicados. Rode os jobs (README) e faça commit de data/publicado/.")
-    d = {k: pd.read_parquet(PUB / f"{k}.parquet") for k in ("ativos", "fluxo", "vida", "populacao")}
+    m = json.loads(meta.read_text(encoding="utf-8"))
+    if m.get("formato") != 2:
+        raise HTTPException(503, "Agregados no formato antigo (só Alagoas). Rode jobs/publicar_brasil.py.")
+    d = {k: pd.read_parquet(PUB / f"{k}.parquet") for k in TABELAS}
     d["cnaes"] = pd.read_parquet(PUB / "cnaes.parquet") if (PUB / "cnaes.parquet").exists() else None
-    d["meta"] = json.loads((PUB / "meta.json").read_text(encoding="utf-8"))
+    d["meta"] = m
     return preparar(d)
 
 
 def preparar(d: dict) -> dict:
-    """Índices que a API usa: código IBGE → nome do município e população."""
-    pop = d["populacao"].copy()
-    pop["cod_ibge"] = pop["cod_ibge"].astype(str)
-    if "ano" in pop:
-        pop = pop.sort_values("ano").groupby("cod_ibge", as_index=False).last()
-    d["por_codigo"] = {r.cod_ibge: (r.municipio, float(r.populacao)) for r in pop.itertuples()}
-    d["pop_uf"] = float(pop["populacao"].sum())
-    # nomes do agregado podem vir da Receita (sem acento): liga pelo nome normalizado
-    nomes = d["ativos"]["municipio"].dropna().unique()
-    d["nome_agregado"] = {normalizar_nome(n): n for n in nomes}
+    """Índices em memória: por município, por UF e a matriz de covariáveis do modelo."""
+    mun = d["municipios"].copy()
+    mun["cod_ibge"] = mun["cod_ibge"].astype(str)
+    d["municipios"] = mun.set_index("cod_ibge")
+    d["busca"] = mun.assign(chave=mun["municipio"].map(normalizar_nome))[["cod_ibge", "municipio", "uf", "chave", "populacao"]]
+    d["X"] = matriz(mun).set_index("cod_ibge")
+    d["pop_uf"] = mun.groupby("uf")["populacao"].sum()
+    for k in ("ativos", "movimento", "sobrevivencia"):
+        t = d[k].copy()
+        t["cod_ibge"] = t["cod_ibge"].astype(str)
+        t["cnae_principal"] = t["cnae_principal"].astype(int)
+        t["uf"] = t["cod_ibge"].map(mun.set_index("cod_ibge")["uf"])
+        d[k] = t
+    d["sobrevivencia_uf"] = d["sobrevivencia_uf"].assign(cnae_principal=lambda x: x["cnae_principal"].astype(int))
+    d["saturacao"] = d["saturacao"].assign(cnae_principal=lambda x: x["cnae_principal"].astype(int)).set_index("cnae_principal")
     d["ref"] = pd.Timestamp(d["meta"]["data_referencia"])
     return d
 
@@ -85,95 +92,118 @@ def _fonte(d: dict, *quais: str) -> str:
     return "; ".join(f[q] for q in quais if q in f) + f" — referência {d['meta']['data_referencia']}"
 
 
+def _soma(t: pd.DataFrame, cnaes: list[int], col: str, cod: str | None = None, uf: str | None = None) -> int:
+    s = t[t["cnae_principal"].isin(cnaes)]
+    if cod is not None:
+        s = s[s["cod_ibge"] == cod]
+    if uf is not None:
+        s = s[s["uf"] == uf]
+    return int(s[col].sum())
+
+
 def concorrencia(d, ativ, mun) -> dict:
-    at = d["ativos"][d["ativos"]["cnae_principal"].isin(ativ["cnaes"])]
-    loc = int(at.loc[at["municipio"] == mun["agregado"], "estabelecimentos_ativos"].sum())
-    uf = int(at["estabelecimentos_ativos"].sum())
+    cn, uf = ativ["_cnaes"], mun["uf"]
+    loc = _soma(d["ativos"], cn, "ativos", cod=mun["codigo"])
+    tot_uf = _soma(d["ativos"], cn, "ativos", uf=uf)
     base = {"id": "concorrencia", "title": "Concorrência", "confidence": "OBSERVADO", "sampleSize": loc,
             "source": _fonte(d, "cnpj", "populacao")}
     if loc == 0:
         return base | {"verdict": "neutro", "headline": f"Nenhum CNPJ ativo de {ativ['plural']} em {mun['nome']}",
                        "detail": "Pode ser espaço livre, pouca procura ou negócios informais. Vale ir a campo antes de concluir."}
-    hab, hab_uf = mun["populacao"] / loc, (d["pop_uf"] / uf if uf else None)
+    hab = mun["populacao"] / loc
+    hab_uf = d["pop_uf"].get(uf, 0) / tot_uf if tot_uf else None
     out = base | {"headline": f"1 para cada {_moradores(hab)} moradores ({_num(loc)} ativos)"}
     if not hab_uf:
         return out | {"verdict": "neutro"}
-    razao = hab_uf / hab   # > 1: mais concorrentes por morador que a média do estado
+    razao = hab_uf / hab   # > 1: mais concorrentes por morador que a média da UF
     v = "favoravel" if razao <= 0.8 else "atencao" if razao >= 1.25 else "neutro"
-    return out | {"verdict": v, "comparison": f"Média de Alagoas: 1 para cada {_moradores(hab_uf)} moradores",
-                  "detail": {"favoravel": "Menos concorrentes por morador que a média de Alagoas.",
-                             "atencao": "Mais concorrentes por morador que a média de Alagoas.",
-                             "neutro": "Parecido com a média de Alagoas."}[v]}
+    nome_uf = NOME_UF.get(uf, uf)
+    return out | {"verdict": v, "comparison": f"Média de {nome_uf}: 1 para cada {_moradores(hab_uf)} moradores",
+                  "detail": {"favoravel": f"Menos concorrentes por morador que a média de {nome_uf}.",
+                             "atencao": f"Mais concorrentes por morador que a média de {nome_uf}.",
+                             "neutro": f"Parecido com a média de {nome_uf}."}[v]}
 
 
-def _km(tv: pd.DataFrame) -> tuple[dict, int]:
-    n = int(tv[["d", "c"]].to_numpy().sum())
-    if n == 0:
-        return {}, 0
-    return sobrevivencia_em(curva_km(tv), HORIZONTE), n   # S após os meses 0..23 completos
+def espaco(d, ativ, mun) -> dict:
+    """MOD-03: quantos a cidade 'deveria' ter, dado tamanho, renda e região (Binomial Negativa)."""
+    cn = [c for c in ativ["_cnaes"] if c in d["saturacao"].index]
+    base = {"id": "espaco", "title": "Espaço no mercado", "confidence": "ESTIMADO", "source": _fonte(d, "cnpj", "populacao", "pib")}
+    if not cn or mun["codigo"] not in d["X"].index:
+        return base | {"verdict": "neutro", "headline": "Ainda sem modelo para esse ramo",
+                       "detail": "Poucos negócios desse tipo no Brasil para estimar com segurança."}
+    x = d["X"].loc[mun["codigo"]]
+    mu = sum(esperado(d["saturacao"].loc[c], x) for c in cn)
+    alpha = float(d["saturacao"].loc[cn[0], "alpha"])
+    lo, hi = faixa_nb(mu, alpha)
+    obs = _soma(d["ativos"], cn, "ativos", cod=mun["codigo"])
+    v = "favoravel" if obs < lo else "atencao" if obs > hi else "neutro"
+    detalhe = {"favoravel": "Menos do que o esperado para uma cidade desse tamanho e renda: pode haver espaço, ou pouca procura. Vale confirmar na rua.",
+               "atencao": "Mais do que o esperado para uma cidade desse tamanho e renda: o mercado tende a ser mais disputado.",
+               "neutro": "Dentro do esperado para uma cidade desse tamanho e renda."}[v]
+    return base | {"verdict": v, "sampleSize": obs,
+                   "headline": f"Tem {_num(obs)}; uma cidade parecida teria cerca de {_num(mu)}",
+                   "detail": detalhe + " Comparamos com cidades parecidas do Brasil todo.",
+                   "comparison": f"Faixa normal para {mun['nome']}: de {_num(lo)} a {_num(hi)}"}
 
 
 def sobrevivencia(d, ativ, mun) -> dict:
-    v = d["vida"]
-    ult = d["ref"].year - 1 - int(HORIZONTE / 12)          # coorte mais recente com 24 meses completos
-    while (d["ref"] - pd.Timestamp(f"{ult}-12-31")).days / MES < HORIZONTE:
-        ult -= 1
-    coortes = range(ult - COORTES + 1, ult + 1)
-    sel = v[(v["evento"] == EVENTO) & v["cnae_principal"].isin(ativ["cnaes"]) & v["coorte"].isin(coortes)]
-    r_loc, n_loc = _km(sel[sel["municipio"] == mun["agregado"]])
-    r_uf, n_uf = _km(sel)
+    """MOD-02: sobrevivência em 24 meses, cidade puxada para a UF na medida da incerteza."""
+    cn, uf, nome_uf = ativ["_cnaes"], mun["uf"], NOME_UF.get(mun["uf"], mun["uf"])
+    c0, c1 = d["meta"].get("coortes_sobrevivencia", ["?", "?"])
     base = {"id": "sobrevivencia", "title": "Sobrevivência", "confidence": "OBSERVADO", "source": _fonte(d, "cnpj")}
-    periodo = f"abertos de {coortes[0]} a {coortes[-1]}"
-    if not r_uf:
+    su = d["sobrevivencia_uf"]
+    su = su[(su["uf"] == uf) & su["cnae_principal"].isin(cn)]
+    if su.empty or su["n"].sum() == 0:
         return base | {"verdict": "neutro", "headline": "Sem aberturas suficientes para medir", "sampleSize": 0}
-    faixa = lambda r: f"entre {_pct(r['ic_inf'])} e {_pct(r['ic_sup'])}"  # noqa: E731
-    if n_loc < N_MIN_COORTE:
-        return base | {"verdict": "neutro", "sampleSize": n_uf,
-                       "headline": f"Em Alagoas, {_pct(r_uf['S'])} seguem abertos após 2 anos",
-                       "detail": f"{mun['nome']} teve só {n_loc} aberturas no período ({periodo}), menos que o mínimo de {N_MIN_COORTE}; usamos o estado. Faixa provável {faixa(r_uf)}."}
-    dif = r_loc["S"] - r_uf["S"]
-    sobrepoe = r_loc["ic_inf"] <= r_uf["ic_sup"] and r_uf["ic_inf"] <= r_loc["ic_sup"]
-    verd = "neutro" if sobrepoe or abs(dif) < 0.05 else "favoravel" if dif > 0 else "risco" if dif <= -0.15 else "atencao"
-    return base | {"verdict": verd, "sampleSize": n_loc,
-                   "headline": f"{_pct(r_loc['S'])} seguem abertos após 2 anos",
-                   "detail": f"Faixa provável {faixa(r_loc)}. Base: {_num(n_loc)} negócios {periodo} (Kaplan-Meier).",
-                   "comparison": f"Média de Alagoas: {_pct(r_uf['S'])}"}
+    s_uf = float((su["s"] * su["n"]).sum() / su["n"].sum())
+    linha = d["sobrevivencia"]
+    linha = linha[(linha["cod_ibge"] == mun["codigo"]) & linha["cnae_principal"].isin(cn)]
+    if linha.empty:
+        return base | {"verdict": "neutro", "sampleSize": int(su["n"].sum()),
+                       "headline": f"Em {nome_uf}, {_pct(s_uf)} seguem abertos após 2 anos",
+                       "detail": f"{mun['nome']} não teve aberturas de {ativ['plural']} de {c0} a {c1}; usamos {nome_uf}."}
+    r = linha.iloc[0] if len(linha) == 1 else linha.assign(w=linha["n"]).pipe(
+        lambda t: pd.Series({c: (t[c] * t["w"]).sum() / t["w"].sum() for c in ("s", "ic_inf", "ic_sup", "peso_local")} | {"n": t["n"].sum()}))
+    s, n = float(r["s"]), int(r["n"])
+    dentro = r["ic_inf"] <= s_uf <= r["ic_sup"]
+    verd = "neutro" if dentro or abs(s - s_uf) < 0.05 else "favoravel" if s > s_uf else "risco" if s - s_uf <= -0.15 else "atencao"
+    detalhe = f"Faixa provável entre {_pct(r['ic_inf'])} e {_pct(r['ic_sup'])}. Base: {_num(n)} negócios abertos de {c0} a {c1}."
+    if r["peso_local"] < 0.5:
+        detalhe += f" Como a cidade tem poucos casos, o número também usa a média de {nome_uf}."
+    return base | {"verdict": verd, "sampleSize": n, "headline": f"{_pct(s)} seguem abertos após 2 anos",
+                   "detail": detalhe, "comparison": f"Média de {nome_uf}: {_pct(s_uf)}"}
 
 
 def movimento(d, ativ, mun) -> dict:
-    fl = d["fluxo"][d["fluxo"]["cnae_principal"].isin(ativ["cnaes"])]
-    anos = list(range(d["ref"].year - 3, d["ref"].year))       # 3 anos completos
-    fl = fl[fl["ano"].isin(anos)]
-    loc = fl[fl["municipio"] == mun["agregado"]]
-    ab, enc, ina = (int(loc[c].sum()) for c in ("aberturas", "encerramentos", "inaptas"))
-    saidas = enc + ina
-    base = {"id": "demanda", "title": "Movimento do setor", "confidence": "OBSERVADO", "sampleSize": ab + saidas,
+    cn, uf, nome_uf = ativ["_cnaes"], mun["uf"], NOME_UF.get(mun["uf"], mun["uf"])
+    ab = _soma(d["movimento"], cn, "aberturas", cod=mun["codigo"])
+    fe = _soma(d["movimento"], cn, "fechamentos", cod=mun["codigo"])
+    base = {"id": "demanda", "title": "Movimento do setor", "confidence": "OBSERVADO", "sampleSize": ab + fe,
             "source": _fonte(d, "cnpj")}
-    if ab + saidas == 0:
-        return base | {"verdict": "neutro", "headline": f"Nenhuma abertura ou fechamento de {ativ['plural']} em {anos[0]}–{anos[-1]}"}
-    taxa = ab / max(saidas, 1)
-    ab_uf, sai_uf = int(fl["aberturas"].sum()), int(fl["encerramentos"].sum() + fl["inaptas"].sum())
-    taxa_uf = ab_uf / max(sai_uf, 1)
-    v = "favoravel" if taxa >= taxa_uf * 1.2 and ab > saidas else "atencao" if saidas >= ab or taxa <= taxa_uf * 0.8 else "neutro"
-    return base | {"verdict": v,
-                   "headline": f"{_num(ab)} abriram e {_num(saidas)} fecharam de {anos[0]} a {anos[-1]}",
+    if ab + fe == 0:
+        return base | {"verdict": "neutro", "headline": f"Nenhuma abertura ou fechamento de {ativ['plural']} nos últimos 3 anos"}
+    ab_uf, fe_uf = _soma(d["movimento"], cn, "aberturas", uf=uf), _soma(d["movimento"], cn, "fechamentos", uf=uf)
+    taxa, taxa_uf = ab / max(fe, 1), ab_uf / max(fe_uf, 1)
+    v = "favoravel" if taxa >= taxa_uf * 1.2 and ab > fe else "atencao" if fe >= ab or taxa <= taxa_uf * 0.8 else "neutro"
+    return base | {"verdict": v, "headline": f"{_num(ab)} abriram e {_num(fe)} fecharam nos últimos 3 anos",
                    "detail": "Fechadas = baixadas ou inaptas. Mais aberturas que fechamentos indica setor em expansão, não garantia de procura.",
-                   "comparison": f"Alagoas: {_num(ab_uf)} abriram e {_num(sai_uf)} fecharam"}
+                   "comparison": f"{nome_uf}: {_num(ab_uf)} abriram e {_num(fe_uf)} fecharam"}
 
 
 def _municipio(d: dict, codigo: str) -> dict:
-    if codigo not in d["por_codigo"]:
-        raise HTTPException(404, "Município fora da cobertura.")
-    nome, pop = d["por_codigo"][codigo]
-    return {"codigo": codigo, "nome": nome, "populacao": pop,
-            "agregado": d["nome_agregado"].get(normalizar_nome(nome), nome)}
+    if codigo not in d["municipios"].index:
+        raise HTTPException(404, "Município não encontrado.")
+    r = d["municipios"].loc[codigo]
+    return {"codigo": codigo, "nome": r["municipio"], "uf": r["uf"], "populacao": float(r["populacao"])}
 
 
 @app.get("/health")
 def health():
     try:
         d = dados()
-        return {"status": "ok", "versao": VERSAO, "edicao": d["meta"]["edicao"], "data_referencia": d["meta"]["data_referencia"]}
+        m = d["meta"]
+        return {"status": "ok", "versao": VERSAO, "cobertura": m.get("cobertura"), "edicao": m["edicao"],
+                "data_referencia": m["data_referencia"], "municipios": m.get("municipios_com_cnpj")}
     except HTTPException as e:
         return {"status": "sem_dados", "detalhe": e.detail}
 
@@ -185,21 +215,40 @@ def atividades():
     return [{**a, "cnaes_oficiais": {c: desc.get(c) for c in a["cnaes"]}} for a in ATIVIDADES]
 
 
+@app.get("/v1/municipios")
+def municipios(busca: str = Query(..., min_length=2, max_length=60), limite: int = Query(10, ge=1, le=30)):
+    """Busca por nome em todo o Brasil; começa-com primeiro, depois contém; maiores cidades primeiro."""
+    d = dados()
+    q = normalizar_nome(busca)
+    b = d["busca"]
+    comeca = b[b["chave"].str.startswith(q)]
+    contem = b[~b.index.isin(comeca.index) & b["chave"].str.contains(q, regex=False)]
+    res = pd.concat([comeca.sort_values("populacao", ascending=False), contem.sort_values("populacao", ascending=False)])
+    return [{"codigo": r.cod_ibge, "nome": r.municipio, "uf": r.uf} for r in res.head(limite).itertuples()]
+
+
+LIMITACOES = [
+    "Conta só empresas com CNPJ e com essa atividade como principal; negócios informais não aparecem, então a concorrência real costuma ser maior.",
+    "CNPJ baixado ou inapto nem sempre é falência: pode ser mudança de ramo, de cidade ou de tipo de empresa.",
+    "Algumas empresas se registram com a atividade errada; os números podem incluir ou deixar de fora negócios parecidos.",
+    "Os números descrevem o passado do setor. Não são causa nem previsão do seu resultado.",
+]
+
+
 @app.get("/v1/insights")
 def insights(municipio: str = Query(..., min_length=7, max_length=7), atividade: str = Query(..., max_length=40)):
     d = dados()
     ativ = next((a for a in ATIVIDADES if a["id"] == atividade), None)
     if ativ is None:
         raise HTTPException(404, "Atividade ainda não coberta.")
+    ativ = ativ | {"_cnaes": [int(c) for c in ativ["cnaes"]]}
     mun = _municipio(d, municipio)
-    limitacoes = ["Conta só empresas com CNPJ e com essa atividade como principal; negócios informais não aparecem.",
-                  "CNPJ ativo não prova que o negócio está funcionando de fato.",
-                  "Os números descrevem o passado do setor. Não são causa nem previsão do seu resultado."]
+    limitacoes = list(LIMITACOES)
     if ativ.get("aviso"):
         limitacoes.append(ativ["aviso"])
     if not ativ.get("validado"):
         limitacoes.append("Classificação de atividade (CNAE) em validação.")
     return {"municipalityCode": municipio, "activityId": atividade,
             "modelVersion": f"{VERSAO} · edição {d['meta']['edicao']}", "generatedAt": d["meta"].get("gerado_em", ""),
-            "signals": [concorrencia(d, ativ, mun), sobrevivencia(d, ativ, mun), movimento(d, ativ, mun)],
+            "signals": [concorrencia(d, ativ, mun), espaco(d, ativ, mun), sobrevivencia(d, ativ, mun), movimento(d, ativ, mun)],
             "limitations": limitacoes}

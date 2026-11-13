@@ -4,3 +4,5 @@ pyarrow>=14
 streamlit>=1.48
 altair>=5
 requests>=2.31
+scipy>=1.11
+statsmodels>=0.14

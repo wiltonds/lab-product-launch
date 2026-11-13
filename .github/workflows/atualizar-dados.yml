@@ -1,8 +1,10 @@
-# Atualiza os agregados de Alagoas na nuvem do GitHub (sem usar o computador de ninguém).
-# Baixa a base do CNPJ da Receita, recorta AL, gera data/publicado/ e faz commit.
+# Atualiza os agregados do BRASIL INTEIRO na nuvem do GitHub (sem usar o computador de ninguém).
+# Baixa a base do CNPJ da Receita, separa por UF, junta população e PIB do IBGE,
+# roda os modelos (sobrevivência com Bayes empírico e espaço no mercado) e faz commit
+# de data/publicado/ (só contagens e coeficientes, nada identifica empresa ou pessoa).
 # Roda: todo dia 20 (a Receita costuma publicar na 2ª quinzena), manualmente pela aba
-# Actions ("Run workflow"), ou quando este arquivo muda na branch api-e-webapp.
-name: Atualizar dados de Alagoas
+# Actions ("Run workflow"), ou quando este arquivo muda na branch brasil-todo.
+name: Atualizar dados do Brasil
 
 on:
   workflow_dispatch:
@@ -13,7 +15,7 @@ on:
   schedule:
     - cron: "17 9 20 * *"
   push:
-    branches: [api-e-webapp]
+    branches: [brasil-todo]
     paths: [".github/workflows/atualizar-dados.yml"]
 
 permissions:
@@ -26,7 +28,7 @@ concurrency:
 jobs:
   atualizar:
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    timeout-minutes: 330
     steps:
       - uses: actions/checkout@v4
 
@@ -35,7 +37,7 @@ jobs:
           python-version: "3.12"
 
       - name: Instalar dependências
-        run: pip install numpy pandas pyarrow requests
+        run: pip install numpy pandas pyarrow requests scipy statsmodels
 
       - name: Descobrir a edição mais recente
         id: mes
@@ -65,19 +67,24 @@ jobs:
           if [ "$n" -lt 10 ]; then echo "::error::Download incompleto ($n de 10)."; exit 1; fi
           du -sh data/raw/cnpj/$m
 
-      - name: Recortar Alagoas e apagar os zips
+      - name: Separar por UF (Brasil inteiro) e apagar os zips
         run: |
-          python jobs/extrair_al.py --mes ${{ steps.mes.outputs.mes }}
+          python jobs/extrair_brasil.py --mes ${{ steps.mes.outputs.mes }}
           rm -rf data/raw/cnpj
+          du -sh data/processed
 
-      - name: População (IBGE)
+      - name: População dos 5.570 municípios (IBGE)
         run: python jobs/coletar_populacao.py
 
-      - name: Auditoria e agregados
+      - name: PIB dos municípios (IBGE)
+        continue-on-error: true   # sem PIB o modelo usa só tamanho e região
+        run: python jobs/coletar_pib.py
+
+      - name: Modelos e agregados
         run: |
-          python jobs/auditar_fontes.py --mes ${{ steps.mes.outputs.mes }}
-          python jobs/publicar_agregados.py --mes ${{ steps.mes.outputs.mes }}
+          python jobs/publicar_brasil.py --mes ${{ steps.mes.outputs.mes }}
           ls -la data/publicado
+          cat data/auditoria/municipios_${{ steps.mes.outputs.mes }}.md | head -20
 
       - name: Guardar relatório de auditoria
         uses: actions/upload-artifact@v4
@@ -91,5 +98,5 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data/publicado data/auditoria
           if git diff --cached --quiet; then echo "Nada mudou."; exit 0; fi
-          git commit -m "Agregados de AL, edição ${{ steps.mes.outputs.mes }}"
+          git commit -m "Agregados do Brasil, edição ${{ steps.mes.outputs.mes }}"
           git push
