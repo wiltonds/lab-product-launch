@@ -37,7 +37,7 @@ export type MunicipalInsights = {
 export type InsightsState =
   | { status: "loading" }
   | { status: "unavailable"; reason: string }
-  | { status: "ready"; data: MunicipalInsights };
+  | { status: "ready"; data: MunicipalInsights; savedAt?: string };
 
 /** Os três blocos que o painel reserva para os dados do município. */
 export const PLANNED_SIGNALS: { id: string; title: string; question: string; icon: "storefront-outline" | "analytics-outline" | "pulse-outline" | "people-outline" }[] = [
@@ -57,17 +57,41 @@ export function insightsApiUrl(): string | null {
   return url && url.trim() ? url.trim().replace(/\/$/, "") : null;
 }
 
+const cacheKey = (m: string, a: string) => `vinga:insights:${m}:${a}`;
+
+async function storage() {
+  try { return (await import("@react-native-async-storage/async-storage")).default; } catch { return null; }
+}
+
+/** Guarda a última resposta boa de cada cidade + atividade: se a API cair, o app mostra a última análise com a data. */
+async function lerCache(m: string, a: string): Promise<InsightsState | null> {
+  try {
+    const s = await storage();
+    const raw = s ? await s.getItem(cacheKey(m, a)) : null;
+    if (!raw) return null;
+    const { savedAt, data } = JSON.parse(raw) as { savedAt: string; data: MunicipalInsights };
+    return { status: "ready", data, savedAt };
+  } catch { return null; }
+}
+
+async function salvarCache(m: string, a: string, data: MunicipalInsights) {
+  try { const s = await storage(); await s?.setItem(cacheKey(m, a), JSON.stringify({ savedAt: new Date().toISOString(), data })); } catch { /* sem cache, segue */ }
+}
+
 export async function fetchMunicipalInsights(municipalityCode: string, activityId: string, signal?: AbortSignal): Promise<InsightsState> {
   const base = insightsApiUrl();
   if (!base) return { status: "unavailable", reason: "Os modelos de dados do município ainda não estão conectados." };
   if (!municipalityCode || !activityId) return { status: "unavailable", reason: "Escolha o negócio e a cidade para ver os dados." };
   try {
     const res = await fetch(`${base}/v1/insights?municipio=${encodeURIComponent(municipalityCode)}&atividade=${encodeURIComponent(activityId)}`, { signal });
-    if (!res.ok) return { status: "unavailable", reason: "Não há dados validados para essa combinação ainda." };
+    if (res.status === 404) return { status: "unavailable", reason: "Não há dados validados para essa combinação ainda." };
+    if (!res.ok) return (await lerCache(municipalityCode, activityId)) ?? { status: "unavailable", reason: "Os dados estão sendo atualizados. Tente de novo em alguns minutos." };
     const data = (await res.json()) as MunicipalInsights;
     if (!Array.isArray(data.signals)) return { status: "unavailable", reason: "Resposta da API fora do formato esperado." };
+    void salvarCache(municipalityCode, activityId, data);
     return { status: "ready", data };
-  } catch {
-    return { status: "unavailable", reason: "Não foi possível consultar os dados agora." };
+  } catch (e) {
+    if ((e as Error)?.name === "AbortError") return { status: "loading" };
+    return (await lerCache(municipalityCode, activityId)) ?? { status: "unavailable", reason: "Não foi possível consultar os dados agora." };
   }
 }

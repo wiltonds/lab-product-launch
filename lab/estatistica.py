@@ -92,6 +92,7 @@ def sobrevivencia_bayes(sob: pd.DataFrame, nivel: float = 0.90) -> tuple[pd.Data
 
 TERMOS = {  # modelos encaixados, do mais simples ao mais completo (navalha de Occam)
     "tamanho": ["log_pop"],
+    "tamanho+regiao": ["log_pop", "reg_Norte", "reg_Nordeste", "reg_Sul", "reg_Centro-Oeste"],
     "tamanho+renda": ["log_pop", "log_pib_pc"],
     "tamanho+renda+regiao": ["log_pop", "log_pib_pc", "reg_Norte", "reg_Nordeste", "reg_Sul", "reg_Centro-Oeste"],
 }
@@ -139,7 +140,7 @@ def ajustar_saturacao(ativos: pd.DataFrame, muni: pd.DataFrame, min_total: int =
         for nome, termos in TERMOS.items():
             if "log_pib_pc" in termos and not pib_ok:
                 continue
-            if nome.endswith("regiao") and (tem_regiao == 0).any():
+            if "regiao" in nome and (tem_regiao == 0).any():
                 continue
             cols = ["const"] + termos
             try:

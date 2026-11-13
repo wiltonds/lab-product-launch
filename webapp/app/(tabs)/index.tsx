@@ -54,7 +54,7 @@ function Welcome() {
 
     <View style={{ backgroundColor: palette.lime, borderRadius: 22, padding: 18, gap: 10 }}>
       <Text style={{ color: palette.navy, fontWeight: "800", fontSize: 16 }}>Dados oficiais, não achismo</Text>
-      {[["business-outline", "Cadastro de empresas da Receita Federal"], ["people-outline", "População do IBGE"], ["map-outline", "Os 5.570 municípios do Brasil"]].map(([ic, t]) =>
+      {[["business-outline", "Cadastro de empresas da Receita Federal"], ["people-outline", "População do IBGE"], ["map-outline", "Todas as cidades do Brasil"]].map(([ic, t]) =>
         <View key={t} style={{ flexDirection: "row", gap: 10, alignItems: "center" }}><Ionicons name={ic as any} size={18} color={palette.navy} /><Text style={{ color: palette.navy, fontSize: 15 }}>{t}</Text></View>)}
     </View>
     <Text style={{ color: palette.faint, fontSize: 12, textAlign: "center", lineHeight: 18 }}>A análise organiza premissas e riscos. Ela não garante sucesso.</Text>
@@ -199,7 +199,8 @@ export default function HomeScreen() {
     {/* Dados do município — espaço da API */}
     <Card>
       <SectionTitle title={`O que os dados dizem sobre ${place}`} subtitle={insights.status === "ready" ? `Modelo ${insights.data.modelVersion}` : "Prós e contras do local para o seu tipo de negócio."}
-        right={insights.status === "ready" ? <Tag tone="positive">AO VIVO</Tag> : <Tag tone="attention">EM BREVE</Tag>} />
+        right={insights.status === "ready" ? (insights.savedAt ? <Tag tone="attention">SALVO</Tag> : <Tag tone="positive">AO VIVO</Tag>) : <Tag tone="attention">EM BREVE</Tag>} />
+      {insights.status === "ready" && insights.savedAt ? <Body size={13}>Não deu para atualizar agora. Estes são os dados de {new Date(insights.savedAt).toLocaleDateString("pt-BR")}.</Body> : null}
       {insights.status === "ready"
         ? <>{insights.data.signals.map((s) => <SignalRow key={s.id} s={s} />)}{insights.data.limitations.length ? <Text style={{ color: palette.faint, fontSize: 12 }}>{insights.data.limitations.join(" ")}</Text> : null}</>
         : <>
