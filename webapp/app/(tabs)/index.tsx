@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useRouter } from "expo-router";
-import { Animated, Easing, Linking, Pressable, ScrollView, Text, View } from "react-native";
+import { Animated, Easing, Pressable, ScrollView, Text, View } from "react-native";
 import { Hello, VingaLogo } from "@/components/vinga";
 import { Ionicons } from "@expo/vector-icons";
 import { Body, Button, Card, Eyebrow, Heading, IconBadge, LinkButton, Page, ProgressBar, SectionTitle, Tag, palette, numStyle } from "@/components/lab-ui";
@@ -245,7 +245,6 @@ export default function HomeScreen() {
       </Pressable>
     </View>
 
-    <Pressable onPress={() => Linking.openURL("https://github.com/wiltonds/lab-product-launch/blob/main/docs/metodologia.md")} style={{ alignSelf: "center", padding: 8 }}><Text style={{ color: palette.muted, fontSize: 13, textDecorationLine: "underline" }}>Como calculamos e limites dos dados</Text></Pressable>
     <View style={{ height: 84 }} />
   </Page></ScrollView>
     {/* Barra fixa de compra */}
