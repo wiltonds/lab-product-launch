@@ -1,5 +1,7 @@
+import { useEffect, useRef } from "react";
 import { useRouter } from "expo-router";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Animated, Easing, Pressable, ScrollView, Text, View } from "react-native";
+import { Hello, VingaLogo } from "@/components/vinga";
 import { Ionicons } from "@expo/vector-icons";
 import { Body, Button, Card, Eyebrow, Heading, IconBadge, LinkButton, Page, ProgressBar, SectionTitle, Tag, palette, numStyle } from "@/components/lab-ui";
 import { useAppData } from "@/hooks/use-app-data";
@@ -13,52 +15,34 @@ import { PLANNED_SIGNALS, SMALL_SAMPLE_THRESHOLD, type InsightSignal } from "@/s
 
 function Welcome() {
   const router = useRouter();
-  const steps: { icon: keyof typeof Ionicons.glyphMap; color: [string, string]; title: string; text: string }[] = [
-    { icon: "chatbubble-ellipses-outline", color: ["#FFE6DA", "#E2531A"], title: "Conte sua ideia", text: "Negócio, cidade e quanto você tem. Leva 2 minutos." },
-    { icon: "stats-chart-outline", color: ["#E3ECFF", "#2F62D9"], title: "Veja os números", text: "Quantos clientes por dia você precisa e o que os dados da cidade dizem." },
-    { icon: "flag-outline", color: ["#FFF1C7", "#B07A00"], title: "Siga o plano", text: "Passos práticos para testar a ideia antes de gastar." },
-  ];
-  const bubbles: { icon: keyof typeof Ionicons.glyphMap; bg: string }[] = [
-    { icon: "cut", bg: "#FF6B2C" }, { icon: "fast-food", bg: "#FFC93C" }, { icon: "construct", bg: "#3D7BFF" }, { icon: "sparkles", bg: "#13A35A" },
-  ];
-  return <ScrollView style={{ flex: 1, backgroundColor: palette.paper }}><Page style={{ paddingTop: 18 }}>
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-      <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: palette.brand, alignItems: "center", justifyContent: "center" }}><Ionicons name="flask" size={19} color={palette.white} /></View>
-      <Text style={{ color: palette.ink, fontWeight: "800", fontSize: 16, flex: 1 }}>Lab do Meu Negócio</Text>
-      <Pressable onPress={() => router.push("/cadastro?modo=entrar")} style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, borderWidth: 1.5, borderColor: palette.line, backgroundColor: palette.white }}>
-        <Text style={{ color: palette.ink, fontWeight: "700", fontSize: 14 }}>Entrar</Text>
-      </Pressable>
-    </View>
-
-    <View style={{ backgroundColor: palette.navy, borderRadius: 32, padding: 24, gap: 18, overflow: "hidden" }}>
-      <View style={{ position: "absolute", right: -60, top: -60, width: 220, height: 220, borderRadius: 110, backgroundColor: "rgba(61,123,255,0.28)" }} />
-      <View style={{ position: "absolute", right: 40, bottom: -70, width: 140, height: 140, borderRadius: 70, backgroundColor: "rgba(255,201,60,0.18)" }} />
-      <View style={{ flexDirection: "row" }}>
-        {bubbles.map((b, i) => <View key={b.icon} style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: b.bg, alignItems: "center", justifyContent: "center", marginLeft: i ? -10 : 0, borderWidth: 3, borderColor: palette.navy }}>
-          <Ionicons name={b.icon} size={22} color={palette.white} />
-        </View>)}
+  const sobe = useRef(new Animated.Value(0)).current;
+  const resto = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.sequence([
+      Animated.timing(sobe, { toValue: 1, duration: 900, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      Animated.timing(resto, { toValue: 1, duration: 600, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+    ]).start();
+  }, [sobe, resto]);
+  const fade = (v: Animated.Value, dy: number) => ({ opacity: v, transform: [{ translateY: v.interpolate({ inputRange: [0, 1], outputRange: [dy, 0] }) }] });
+  return <View style={{ flex: 1, backgroundColor: palette.white }}>
+    <Page style={{ flex: 1, paddingTop: 28, paddingBottom: 36 }}>
+      <Animated.View style={[{ alignItems: "center" }, fade(resto, 8)]}><VingaLogo size={22} /></Animated.View>
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 14 }}>
+        <Animated.View style={fade(sobe, 24)}><Hello width={320} /></Animated.View>
+        <Animated.View style={fade(resto, 12)}>
+          <Text style={{ color: palette.ink, fontSize: 24, lineHeight: 32, fontWeight: "800", textAlign: "center", maxWidth: 320 }}>Vamos tirar o seu negócio do papel.</Text>
+        </Animated.View>
       </View>
-      <Heading color={palette.white} size={33}>Descubra se o seu negócio tem chance <Text style={{ color: palette.lime }}>antes de investir.</Text></Heading>
-      <Body color="#C9D2E3" size={16}>Números da sua ideia + dados reais da sua cidade. De graça, sem planilha e sem enrolação.</Body>
-      <Pressable accessibilityRole="button" onPress={() => router.push("/onboarding")} style={({ pressed }) => ({ backgroundColor: palette.brand, borderRadius: 999, minHeight: 58, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8, transform: [{ scale: pressed ? 0.98 : 1 }] })}>
-        <Text style={{ color: palette.white, fontWeight: "800", fontSize: 17 }}>Começar minha análise</Text><Ionicons name="arrow-forward" size={19} color={palette.white} />
-      </Pressable>
-      <Text style={{ color: "#AEB9CF", fontSize: 13, textAlign: "center" }}>Grátis · 2 minutos · sem cadastro para começar</Text>
-    </View>
-
-    <Text style={{ color: palette.ink, fontWeight: "800", fontSize: 20, marginTop: 6 }}>Como funciona</Text>
-    {steps.map((st, i) => <View key={st.title} style={{ flexDirection: "row", gap: 14, alignItems: "center", backgroundColor: palette.white, borderRadius: 22, padding: 16 }}>
-      <View style={{ width: 50, height: 50, borderRadius: 17, backgroundColor: st.color[0], alignItems: "center", justifyContent: "center" }}><Ionicons name={st.icon} size={24} color={st.color[1]} /></View>
-      <View style={{ flex: 1, gap: 2 }}><Text style={{ color: palette.ink, fontWeight: "800", fontSize: 16 }}>{i + 1}. {st.title}</Text><Body size={14}>{st.text}</Body></View>
-    </View>)}
-
-    <View style={{ backgroundColor: palette.lime, borderRadius: 22, padding: 18, gap: 10 }}>
-      <Text style={{ color: palette.navy, fontWeight: "800", fontSize: 16 }}>Dados oficiais, não achismo</Text>
-      {[["business-outline", "Cadastro de empresas da Receita Federal"], ["people-outline", "População do IBGE"], ["map-outline", "Todas as cidades do Brasil"]].map(([ic, t]) =>
-        <View key={t} style={{ flexDirection: "row", gap: 10, alignItems: "center" }}><Ionicons name={ic as any} size={18} color={palette.navy} /><Text style={{ color: palette.navy, fontSize: 15 }}>{t}</Text></View>)}
-    </View>
-    <Text style={{ color: palette.faint, fontSize: 12, textAlign: "center", lineHeight: 18 }}>A análise organiza premissas e riscos. Ela não garante sucesso.</Text>
-  </Page></ScrollView>;
+      <Animated.View style={[{ gap: 16, alignItems: "stretch" }, fade(resto, 12)]}>
+        <Pressable accessibilityRole="button" onPress={() => router.push("/onboarding")} style={({ pressed }) => ({ backgroundColor: palette.brand, borderRadius: 999, minHeight: 60, alignItems: "center", justifyContent: "center", transform: [{ scale: pressed ? 0.98 : 1 }] })}>
+          <Text style={{ color: palette.navy, fontWeight: "800", fontSize: 18 }}>Começar</Text>
+        </Pressable>
+        <Text style={{ color: palette.muted, fontSize: 15, textAlign: "center" }}>
+          Já tem conta? <Text accessibilityRole="link" onPress={() => router.push("/cadastro?modo=entrar")} style={{ color: palette.brandText, fontWeight: "700" }}>Entrar</Text>
+        </Text>
+      </Animated.View>
+    </Page>
+  </View>;
 }
 
 function SignalRow({ s }: { s: InsightSignal }) {

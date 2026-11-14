@@ -2,6 +2,7 @@ import { Tabs, usePathname, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Platform, Pressable, Text, useWindowDimensions, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { VingaLogo } from "@/components/vinga";
 import { useColors } from "@/hooks/use-colors";
 import { useAppData } from "@/hooks/use-app-data";
 import { palette } from "@/components/lab-ui";
@@ -32,8 +33,7 @@ function AppHeader({ wide }: { wide: boolean }) {
   return <View style={{ backgroundColor: palette.white, borderBottomWidth: 1, borderBottomColor: palette.line, paddingTop: Platform.OS === "web" ? 0 : insets.top }}>
     <View style={{ height: 64, paddingHorizontal: 20, flexDirection: "row", alignItems: "center", gap: 16, width: "100%", maxWidth: wide ? 1080 : 560, alignSelf: "center" }}>
       <Pressable onPress={() => router.push("/")} style={{ flexDirection: "row", alignItems: "center", gap: 10 }} accessibilityRole="link" accessibilityLabel="Início">
-        <View style={{ width: 34, height: 34, borderRadius: 11, backgroundColor: palette.brand, alignItems: "center", justifyContent: "center" }}><Ionicons name="flask" size={18} color={palette.white} /></View>
-        <Text style={{ color: palette.ink, fontWeight: "800", fontSize: 16 }}>Lab do Meu Negócio</Text>
+        <VingaLogo size={20} />
       </Pressable>
       <View style={{ flex: 1 }} />
       {wide ? <View style={{ flexDirection: "row", gap: 4 }}>

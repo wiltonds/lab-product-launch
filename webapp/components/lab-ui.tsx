@@ -3,7 +3,7 @@ import { Platform, Pressable, StyleSheet, Text, TextInput, type TextInputProps, 
 import { Ionicons } from "@expo/vector-icons";
 
 /**
- * Design system do Lab do Meu Negócio.
+ * Design system do Vinga.
  * Direção "Energia": laranja (ação), azul-marinho (confiança), amarelo (destaque). Um número forte por bloco,
  * prós e contras do local, faixa de comparação ao lado de cada número.
  */
