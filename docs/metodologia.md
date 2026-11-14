@@ -1,6 +1,6 @@
 # Como o Vinga calcula cada número
 
-Versão 0.3 · Responsável: Wilton Costa, mestre em Gestão com ênfase em Ciência de Dados
+Versão 0.3 · Edição de dados 2026-10 · Responsável: Wilton Costa, mestre em Gestão com ênfase em Ciência de Dados
 
 O Vinga só usa dados públicos e mostra a conta. Este texto explica, em linguagem simples, de onde vem cada número que aparece no app e o que ele **não** diz.
 
@@ -66,7 +66,30 @@ Junta quatro partes, cada uma de 0 a 100 (maior = mais a favor). Os pesos abaixo
 
 ## Como sabemos se funciona
 
-- **Sobrevivência:** a cada edição, o modelo é treinado com as 5 coortes anteriores e testado na coorte seguinte, que ele nunca viu. Comparamos três jeitos de prever: só a cidade, só o estado e o Bayes empírico. O resultado sai no relatório `data/auditoria/municipios_<edição>.md` e no `meta.json`.
-- **Espaço no mercado:** validação cruzada em 5 partes. Cada pedaço das cidades é previsto por um modelo que não o viu, e comparamos com a regra simples "proporcional à população".
+Cada edição dos dados roda um teste fora da amostra: o modelo é avaliado em dados que ele não viu ao aprender. Resultado da edição de outubro de 2026:
+
+### Espaço no mercado
+Validação cruzada em 5 partes: cada pedaço das cidades é previsto por um modelo que não o viu. Comparamos com a regra simples "proporcional à população", nas 40 atividades com mais negócios.
+
+| Jeito de prever | Erro típico (quantas vezes a previsão erra para mais ou para menos) |
+| --- | --- |
+| Proporcional à população | cerca de 2,8 vezes |
+| **Modelo do Vinga** | **cerca de 1,6 vez** |
+
+O modelo ganhou nas **40 de 40** atividades testadas. Entre os 1.008 modelos ajustados, a versão completa (tamanho, renda e região) venceu em 806; nas demais ficou uma versão mais simples, porque a informação extra não pagava o próprio custo (critério AIC).
+
+### Sobrevivência em 2 anos
+O modelo aprendeu com quem abriu de 2018 a 2022 e tentou prever o que aconteceu com quem abriu em 2023: **3.980.468 negócios** que ele nunca tinha visto.
+
+| Jeito de prever | Log-loss (menor = melhor) | Erro médio |
+| --- | --- | --- |
+| Só a cidade | 0,635 | 7,6 pontos percentuais |
+| Só o estado | 0,557 | 7,4 pontos percentuais |
+| **Bayes empírico (usado no app)** | **0,557** | **7,4 pontos percentuais** |
+
+O que isso mostra: olhar só a cidade é o pior jeito de prever. Em sobrevivência, a cidade acrescenta pouco além do estado e da atividade, e o Bayes empírico aprendeu isso sozinho, apoiando-se no estado. Mostrar o número cru da cidade seria mostrar ruído. Os próximos ganhos devem vir de outras informações (porte da empresa, tipo de ponto), não de mais detalhe geográfico.
+
+### Sempre
 - Todo o código é testado com dados sintéticos de resultado conhecido (o modelo precisa recuperar o que foi colocado).
 - Regra da navalha de Occam: se o modelo mais complexo não ganhar no teste fora da amostra, volta o mais simples.
+- Os números de cada edição ficam em `data/auditoria/municipios_<edição>.md` e em `data/publicado/meta.json`.

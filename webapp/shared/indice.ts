@@ -83,9 +83,9 @@ export function computeIndice(data: AppData, market?: { market: number | null; s
 }
 
 function explicar(parte: PartId, b: ReturnType<typeof bolso>, data: AppData): { reason: string; action: string } {
-  const plural = data.idea.activity ? data.idea.activity.toLowerCase() : "esse negócio";
+  const ramo = data.idea.activity ? `de ${data.idea.activity.toLowerCase()}` : "desse tipo de negócio";
   if (parte === "mercado") return {
-    reason: `O mercado de ${plural} em ${data.idea.municipality || "sua cidade"} está mais disputado do que o normal.`,
+    reason: `O mercado ${ramo} em ${data.idea.municipality || "sua cidade"} está mais disputado do que o normal.`,
     action: "Visite 3 concorrentes e anote preço, fila e o que falta neles. Seu diferencial nasce daí.",
   };
   if (parte === "sobrevivencia") return {
