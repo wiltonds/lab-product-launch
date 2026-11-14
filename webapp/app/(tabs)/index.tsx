@@ -114,31 +114,6 @@ export default function HomeScreen() {
       {indice.partial ? <Text style={{ color: palette.muted, fontSize: 13, lineHeight: 19 }}>{insights.status === "loading" ? "Buscando os dados da sua cidade…" : "Nota parcial: sem os dados da cidade, usamos só as suas contas e o seu preparo."}</Text> : null}
     </View>
 
-    {/* Riscos: 1 aberto, os outros com o olho fechado → página de compra */}
-    <View style={{ backgroundColor: palette.navy, borderRadius: 30, padding: 22, gap: 14 }}>
-      <Text style={{ color: palette.lime, fontWeight: "800", fontSize: 12, letterSpacing: 1 }}>ANTES DE COLOCAR SEU DINHEIRO</Text>
-      <Text style={{ color: palette.white, fontSize: 24, lineHeight: 30, fontWeight: "800" }}>{name ? `${name}, veja` : "Veja"} o que pode dar errado no seu plano.</Text>
-      <View style={{ backgroundColor: "rgba(255,255,255,0.10)", borderRadius: 18, padding: 14, flexDirection: "row", gap: 12, alignItems: "flex-start" }}>
-        <Ionicons name="eye" size={20} color={palette.lime} />
-        <View style={{ flex: 1, gap: 2 }}>
-          <Text style={{ color: palette.lime, fontWeight: "800", fontSize: 12 }}>SEU MAIOR RISCO</Text>
-          <Text style={{ color: palette.white, fontSize: 15, lineHeight: 22 }}>{indice.reason}</Text>
-        </View>
-      </View>
-      {LOCKED.map((t, i) => <Pressable key={t} accessibilityRole="button" accessibilityLabel={`${t}. Bloqueado. Ver no plano completo.`} onPress={() => router.push("/report")}
-        style={{ backgroundColor: "rgba(255,255,255,0.06)", borderRadius: 18, padding: 14, flexDirection: "row", gap: 12, alignItems: "center" }}>
-        <Ionicons name="eye-off" size={20} color="#AEB9CF" />
-        <View style={{ flex: 1, gap: 6 }}>
-          <Text style={{ color: palette.white, fontWeight: "700", fontSize: 15 }}>{t}</Text>
-          <View style={{ height: 8, borderRadius: 4, backgroundColor: "rgba(255,255,255,0.14)", width: `${70 - i * 12}%` }} />
-        </View>
-        <Ionicons name="lock-closed" size={16} color="#AEB9CF" />
-      </Pressable>)}
-      <Pressable accessibilityRole="button" onPress={() => router.push("/report")} style={({ pressed }) => ({ backgroundColor: palette.brand, borderRadius: 999, minHeight: 60, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8, transform: [{ scale: pressed ? 0.98 : 1 }] })}>
-        <Ionicons name="eye" size={20} color={palette.navy} /><Text style={{ color: palette.navy, fontWeight: "800", fontSize: 17 }}>Ver todos os riscos e as saídas</Text>
-      </Pressable>
-    </View>
-
     {/* Resultado principal */}
     <View style={{ backgroundColor: palette.navy, borderRadius: 30, padding: 22, gap: 16, overflow: "hidden" }}>
       <View style={{ position: "absolute", right: -50, bottom: -60, width: 200, height: 200, borderRadius: 100, backgroundColor: "rgba(61,123,255,0.22)" }} />
@@ -236,22 +211,32 @@ export default function HomeScreen() {
       <Ionicons name="arrow-forward" size={20} color={palette.white} />
     </Pressable> : null}
 
-    {/* Oferta */}
-    <View style={{ backgroundColor: palette.navy, borderRadius: 30, padding: 24, gap: 12 }}>
-      <Text style={{ color: palette.white, fontSize: 26, lineHeight: 32, fontWeight: "800" }}>Você já sabe a nota. Agora falta abrir.</Text>
-      <Text style={{ color: "#C9D2E3", fontSize: 16, lineHeight: 24 }}>Todos os riscos do seu caso, a saída de cada um e um plano para a sua {data.idea.activity.toLowerCase()} sair do papel em {place}.</Text>
-      <Pressable accessibilityRole="button" onPress={() => router.push("/report")} style={{ backgroundColor: palette.brand, borderRadius: 999, minHeight: 60, alignItems: "center", justifyContent: "center" }}>
-        <Text style={{ color: palette.navy, fontWeight: "800", fontSize: 18 }}>Quero abrir meu negócio agora</Text>
+    {/* Riscos: 1 aberto, os outros com o olho fechado → página de compra */}
+    <View style={{ backgroundColor: palette.navy, borderRadius: 30, padding: 22, gap: 14 }}>
+      <Text style={{ color: palette.lime, fontWeight: "800", fontSize: 12, letterSpacing: 1 }}>ANTES DE COLOCAR SEU DINHEIRO</Text>
+      <Text style={{ color: palette.white, fontSize: 24, lineHeight: 30, fontWeight: "800" }}>{name ? `${name}, veja` : "Veja"} o que pode dar errado no seu plano.</Text>
+      <View style={{ backgroundColor: "rgba(255,255,255,0.10)", borderRadius: 18, padding: 14, flexDirection: "row", gap: 12, alignItems: "flex-start" }}>
+        <Ionicons name="eye" size={20} color={palette.lime} />
+        <View style={{ flex: 1, gap: 2 }}>
+          <Text style={{ color: palette.lime, fontWeight: "800", fontSize: 12 }}>SEU MAIOR RISCO</Text>
+          <Text style={{ color: palette.white, fontSize: 15, lineHeight: 22 }}>{indice.reason}</Text>
+        </View>
+      </View>
+      {LOCKED.map((t, i) => <Pressable key={t} accessibilityRole="button" accessibilityLabel={`${t}. Bloqueado. Ver no plano completo.`} onPress={() => router.push("/report")}
+        style={{ backgroundColor: "rgba(255,255,255,0.06)", borderRadius: 18, padding: 14, flexDirection: "row", gap: 12, alignItems: "center" }}>
+        <Ionicons name="eye-off" size={20} color="#AEB9CF" />
+        <View style={{ flex: 1, gap: 6 }}>
+          <Text style={{ color: palette.white, fontWeight: "700", fontSize: 15 }}>{t}</Text>
+          <View style={{ height: 8, borderRadius: 4, backgroundColor: "rgba(255,255,255,0.14)", width: `${70 - i * 12}%` }} />
+        </View>
+        <Ionicons name="lock-closed" size={16} color="#AEB9CF" />
+      </Pressable>)}
+      <Pressable accessibilityRole="button" onPress={() => router.push("/report")} style={({ pressed }) => ({ backgroundColor: palette.brand, borderRadius: 999, minHeight: 60, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8, transform: [{ scale: pressed ? 0.98 : 1 }] })}>
+        <Ionicons name="eye" size={20} color={palette.navy} /><Text style={{ color: palette.navy, fontWeight: "800", fontSize: 17 }}>Ver os riscos e abrir meu negócio</Text>
       </Pressable>
     </View>
 
-    <View style={{ height: 84 }} />
+    <View style={{ height: 24 }} />
   </Page></ScrollView>
-    {/* Barra fixa de compra */}
-    <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, backgroundColor: palette.white, borderTopWidth: 1, borderTopColor: palette.line, paddingHorizontal: 16, paddingVertical: 10 }}>
-      <Pressable accessibilityRole="button" onPress={() => router.push("/report")} style={{ backgroundColor: palette.brand, borderRadius: 999, minHeight: 54, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8, maxWidth: 560, width: "100%", alignSelf: "center" }}>
-        <Text style={{ color: palette.navy, fontWeight: "800", fontSize: 17 }}>Quero abrir meu negócio agora</Text><Ionicons name="arrow-forward" size={18} color={palette.navy} />
-      </Pressable>
-    </View>
   </View>;
 }
