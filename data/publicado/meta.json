@@ -3,8 +3,8 @@
   "cobertura": "BR",
   "edicao": "2026-10",
   "data_referencia": "2026-10-11",
-  "gerado_em": "2026-11-13",
-  "versao": "0.3.0",
+  "gerado_em": "2026-11-14",
+  "versao": "0.5.0",
   "coortes_sobrevivencia": [
     2019,
     2023
@@ -12,6 +12,7 @@
   "municipios": 5571,
   "municipios_com_cnpj": 5571,
   "modelos_saturacao": 1008,
+  "bairros": 146892,
   "validacao": {
     "sobrevivencia": {
       "negocios_no_teste": 3980468,
