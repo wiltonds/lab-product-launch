@@ -17,6 +17,7 @@ def cliente(tmp_path_factory):
     rec, pop, pib = brasil_sintetico(pasta)
     r = montar(pasta, rec, pop, pib, ref=REF, log=lambda *_: None)
     d = {k: r[k] for k in m.TABELAS}
+    d["bairros"], d["bairros_total"] = r["bairros"], r["bairros_total"]
     d["cnaes"] = None
     co = r["_coortes"].iloc[0]
     d["meta"] = {"formato": 2, "edicao": "demo", "data_referencia": str(REF.date()), "gerado_em": "hoje",
@@ -116,3 +117,16 @@ def test_onde_tem_espaco(cliente):
     assert set(o) == {"cities", "activities"}
     for c in o["cities"]:
         assert c["uf"] == "AL" and c["code"] != "2700005"
+
+
+def test_bairros(cliente):
+    b = cliente.get("/v1/bairros", params={"municipio": "3500003"}).json()
+    nomes = [x["nome"] for x in b]
+    assert "Centro" in nomes and "Jardim America" in nomes
+    assert "Jd America" not in nomes                       # grafias juntadas
+    assert b == sorted(b, key=lambda x: -x["empresas"])
+    r = cliente.get("/v1/insights", params={"municipio": "3500003", "atividade": "lanchonete", "bairro": "centro"}).json()
+    s = r["signals"][0]
+    assert s["id"] == "bairro" and "empresas do bairro" in s["headline"]
+    r = cliente.get("/v1/insights", params={"municipio": "3500003", "atividade": "lanchonete", "bairro": "nao existe"}).json()
+    assert all(x["id"] != "bairro" for x in r["signals"])

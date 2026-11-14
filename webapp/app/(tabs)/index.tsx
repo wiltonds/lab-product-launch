@@ -66,7 +66,7 @@ export default function HomeScreen() {
   const { data } = useAppData();
   const { user } = useAuth();
   const activity = findActivity(data.idea.activity);
-  const insights = useMunicipalInsights(data.idea.outsideState ? "" : data.idea.municipalityCode, activity?.id ?? "");
+  const insights = useMunicipalInsights(data.idea.outsideState ? "" : data.idea.municipalityCode, activity?.id ?? "", data.idea.neighborhood ?? "");
   if (!data.idea.activity) return <Welcome />;
 
   const f = data.finance;

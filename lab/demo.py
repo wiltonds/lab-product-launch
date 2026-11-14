@@ -73,6 +73,7 @@ def brasil_sintetico(pasta, por_uf: int = 20, seed: int = 11):
     from pathlib import Path
 
     rng = np.random.default_rng(seed)
+    rng_b = np.random.default_rng(seed + 1)   # bairros: gerador à parte, não muda o resto
     pasta = Path(pasta)
     pasta.mkdir(parents=True, exist_ok=True)
     rec, pop, pib = [], [], []
@@ -103,6 +104,9 @@ def brasil_sintetico(pasta, por_uf: int = 20, seed: int = 11):
                         "situacao": sit.astype("int8"),
                         "data_situacao": pd.Series(fim).where(fechou, pd.NaT).values.astype("datetime64[s]"),
                         "data_inicio": inicio.values.astype("datetime64[s]"),
-                        "cnae_principal": np.int32(int(cnae)), "municipio_receita": np.int32(cod_rec)}))
+                        "cnae_principal": np.int32(int(cnae)),
+                        "bairro": rng_b.choice(["CENTRO", "JD AMERICA", "JARDIM AMERICA", "VILA NOVA"], n, p=[.5, .2, .1, .2]),
+                        "cep": (np.int32(10000000 + cod_rec * 10) + np.where(rng_b.random(n) < .5, 0, 1)).astype("int32"),
+                        "municipio_receita": np.int32(cod_rec)}))
         pd.concat(linhas, ignore_index=True).to_parquet(pasta / f"uf={uf}.parquet", index=False)
     return pd.DataFrame(rec), pd.DataFrame(pop), pd.DataFrame(pib)
