@@ -37,7 +37,7 @@ def _sinais(cliente, cod, ativ="lanchonete"):
 
 def test_contrato(cliente):
     s, j = _sinais(cliente, "2700000")
-    assert set(j) == {"municipalityCode", "activityId", "modelVersion", "generatedAt", "signals", "marketScore", "limitations"}
+    assert set(j) == {"municipalityCode", "activityId", "modelVersion", "generatedAt", "signals", "marketScore", "opportunities", "limitations"}
     assert set(s) == {"concorrencia", "espaco", "sobrevivencia", "demanda"}
     for x in s.values():
         assert x["verdict"] in {"favoravel", "atencao", "risco", "neutro"}
@@ -108,3 +108,11 @@ def test_notas_do_indice(cliente):
     assert all(v is None or 0 <= v <= 100 for v in n.values())
     _, j = _sinais(cliente, "2700005", "oficina")
     assert j["marketScore"]["market"] is None   # sem dados não vira nota
+
+
+def test_onde_tem_espaco(cliente):
+    _, j = _sinais(cliente, "2700005")
+    o = j["opportunities"]
+    assert set(o) == {"cities", "activities"}
+    for c in o["cities"]:
+        assert c["uf"] == "AL" and c["code"] != "2700005"

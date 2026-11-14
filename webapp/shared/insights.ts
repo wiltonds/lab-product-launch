@@ -31,6 +31,8 @@ export type MunicipalInsights = {
   signals: InsightSignal[];
   /** Partes do Índice Vinga que vêm dos dados públicos (0–100; null = sem dados suficientes). */
   marketScore?: { market: number | null; survival: number | null };
+  /** Onde tem espaço: cidades do mesmo estado e outros ramos na mesma cidade menos disputados. */
+  opportunities?: { cities: { code: string; name: string; uf: string; active: number; expected: number }[]; activities: { id: string; name: string; active: number; expected: number }[] };
   limitations: string[];
 };
 
