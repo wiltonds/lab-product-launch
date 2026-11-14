@@ -240,7 +240,9 @@ def movimento(d, ativ, mun) -> dict:
     taxa, taxa_uf = ab / max(fe, 1), ab_uf / max(fe_uf, 1)
     v = "favoravel" if taxa >= taxa_uf * 1.2 and ab > fe else "atencao" if fe >= ab or taxa <= taxa_uf * 0.8 else "neutro"
     return base | {"verdict": v, "headline": f"{_num(ab)} abriram e {_num(fe)} fecharam nos últimos 3 anos",
-                   "detail": "Fechadas = baixadas ou inaptas. Mais aberturas que fechamentos indica setor em expansão, não garantia de procura.",
+                   "detail": {"favoravel": "Mais gente abrindo do que fechando: o setor está crescendo na cidade.",
+                              "atencao": "Tem fechado tanto ou mais do que abre: o setor está apertado na cidade.",
+                              "neutro": "Abre e fecha no mesmo ritmo do estado."}[v],
                    "comparison": f"{nome_uf}: {_num(ab_uf)} abriram e {_num(fe_uf)} fecharam"}
 
 

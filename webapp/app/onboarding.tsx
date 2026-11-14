@@ -144,7 +144,6 @@ export default function OnboardingScreen() {
 
       {step === 5 ? (!ufPick ? <>
         <Heading>Em qual estado?</Heading>
-        <Body>Depois você escolhe a cidade. Temos dados de todas as cidades do Brasil.</Body>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: palette.white, borderRadius: 18, paddingHorizontal: 16, borderWidth: 2, borderColor: palette.line }}>
           <Ionicons name="search" size={18} color={palette.muted} />
           <TextInput value={query} onChangeText={setQuery} placeholder="Ou digite a cidade direto" placeholderTextColor={palette.faint} style={{ flex: 1, paddingVertical: 16, fontSize: 16, color: palette.ink }} accessibilityLabel="Buscar cidade em todo o Brasil" />
