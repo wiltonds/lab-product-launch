@@ -20,6 +20,7 @@ import sys
 from functools import lru_cache
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -38,7 +39,7 @@ except Exception:  # noqa: BLE001
 
 PUB = Path(os.environ.get("LAB_PUBLICADO", RAIZ / "data" / "publicado"))
 ATIVIDADES = json.loads((Path(__file__).parent / "atividades.json").read_text(encoding="utf-8"))["atividades"]
-VERSAO = "0.3.1"
+VERSAO = "0.4.0"
 TABELAS = ("municipios", "ativos", "movimento", "sobrevivencia", "sobrevivencia_uf", "saturacao")
 # Só as colunas usadas: o plano gratuito do Render tem 512 MB de memória.
 from lab.compacto import COLUNAS, GRANDES  # noqa: E402
@@ -286,6 +287,55 @@ def notas_de_mercado(d, ativ, mun) -> dict:
             "survival": None if s is None else _escala((s - 0.4) / 0.5 * 100)}
 
 
+def _esperado_por_cidade(d: dict, cnaes: list[int], cods: pd.Index) -> pd.Series:
+    """Esperado pelo modelo de espaço no mercado para várias cidades de uma vez."""
+    termos = ["const", "log_pop", "log_pib_pc", "reg_Norte", "reg_Nordeste", "reg_Sul", "reg_Centro-Oeste"]
+    X = d["X"].loc[cods, termos].to_numpy(float)
+    mu = np.zeros(len(cods))
+    for c in cnaes:
+        mu += np.exp(X @ d["saturacao"].loc[c, termos].to_numpy(float))
+    return pd.Series(mu, index=cods)
+
+
+def oportunidades(d, ativ, mun) -> dict:
+    """Onde tem espaço: cidades do mesmo estado e outros ramos na mesma cidade com menos negócios
+    do que o esperado e menos disputadas que a cidade escolhida. Só cidades com 50 mil habitantes
+    ou mais (ou 10% do porte da cidade escolhida), para não sugerir lugar pequeno demais. Menos que o esperado pode ser espaço ou
+    pouca procura: o app diz isso."""
+    cn = [c for c in ativ["_cnaes"] if c in d["saturacao"].index]
+    out = {"cities": [], "activities": []}
+    if mun["codigo"] not in d["X"].index:
+        return out
+    if cn:
+        m = d["municipios"]
+        cand = m[(m["uf"] == mun["uf"]) & (m["populacao"] >= min(300000, max(50000, 0.1 * mun["populacao"])))].index
+        cand = cand.intersection(d["X"].index)
+        mu = _esperado_por_cidade(d, cn, cand)
+        t = d["ativos"]
+        obs = t[t["cnae_principal"].isin(cn)]["ativos"].groupby(level=0).sum()
+        obs.index = obs.index.astype(str)
+        obs = obs.reindex(cand, fill_value=0)
+        razao = (obs + 1) / (mu + 1)
+        aqui = float(razao.get(mun["codigo"], 1.0))
+        ok = razao[(razao < min(1.1, aqui)) & (mu >= 5) & (razao.index != mun["codigo"])].sort_values().head(3)
+        out["cities"] = [{"code": c, "name": m.loc[c, "municipio"], "uf": mun["uf"], "active": int(obs[c]),
+                          "expected": int(round(mu[c]))} for c in ok.index]
+    x = pd.Index([mun["codigo"]])
+    ramos = []
+    for a in ATIVIDADES:
+        if a["id"] == ativ["id"]:
+            continue
+        c2 = [int(c) for c in a["cnaes"] if int(c) in d["saturacao"].index]
+        if not c2 or [int(c) for c in a["cnaes"]] == ativ["_cnaes"]:
+            continue
+        mu2 = float(_esperado_por_cidade(d, c2, x).iloc[0])
+        o2 = _soma(d, "ativos", c2, "ativos", cod=mun["codigo"])
+        if mu2 >= 3 and (o2 + 1) / (mu2 + 1) < 1:
+            ramos.append({"id": a["id"], "name": a["nome"], "active": o2, "expected": int(round(mu2)), "_r": (o2 + 1) / (mu2 + 1)})
+    out["activities"] = [{k: v for k, v in r.items() if k != "_r"} for r in sorted(ramos, key=lambda r: r["_r"])[:3]]
+    return out
+
+
 def _municipio(d: dict, codigo: str) -> dict:
     if codigo not in d["municipios"].index:
         raise HTTPException(404, "Município não encontrado.")
@@ -348,4 +398,5 @@ def insights(municipio: str = Query(..., min_length=7, max_length=7), atividade:
             "modelVersion": f"{VERSAO} · edição {d['meta']['edicao']}", "generatedAt": d["meta"].get("gerado_em", ""),
             "signals": [concorrencia(d, ativ, mun), espaco(d, ativ, mun), sobrevivencia(d, ativ, mun), movimento(d, ativ, mun)],
             "marketScore": notas_de_mercado(d, ativ, mun),
+            "opportunities": oportunidades(d, ativ, mun),
             "limitations": limitacoes}

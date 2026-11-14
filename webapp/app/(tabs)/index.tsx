@@ -83,6 +83,7 @@ export default function HomeScreen() {
   const investableLabel = data.profile.investable > 100000 ? "mais de R$ 100 mil" : formatMoney(data.profile.investable);
   const capitalOk = data.profile.investable >= capitalNeeded;
   const indice = computeIndice(data, insights.status === "ready" ? insights.data.marketScore ?? null : null);
+  const opp = insights.status === "ready" ? insights.data.opportunities : undefined;
   const pending = MISSIONS.filter((m) => !data.completedMissions.includes(m.id));
   const progress = Math.round((data.completedMissions.length / MISSIONS.length) * 100);
 
@@ -188,6 +189,26 @@ export default function HomeScreen() {
           <View style={{ backgroundColor: palette.paper, borderRadius: 14, padding: 12 }}><Text style={{ color: palette.muted, fontSize: 13, lineHeight: 19 }}>{insights.status === "loading" ? "Consultando…" : `${insights.reason} Não mostramos número sem fonte.`}</Text></View>
         </>}
     </Card>
+
+    {/* Onde tem espaço */}
+    {opp && (opp.cities.length || opp.activities.length) ? <Card>
+      <SectionTitle title="Onde tem mais espaço" subtitle="Outros caminhos para o seu plano, pelos dados." />
+      {opp.cities.length ? <View style={{ gap: 8 }}>
+        <Text style={{ color: palette.muted, fontWeight: "800", fontSize: 12, letterSpacing: 1 }}>{`CIDADES MENOS DISPUTADAS PARA ${data.idea.activity.toUpperCase()}`}</Text>
+        {opp.cities.map((c) => <View key={c.code} style={{ flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: palette.paper, borderRadius: 16, padding: 12 }}>
+          <Ionicons name="location" size={18} color={palette.brandText} />
+          <View style={{ flex: 1 }}><Text style={{ color: palette.ink, fontWeight: "800", fontSize: 16 }}>{c.name}</Text><Text style={{ color: palette.muted, fontSize: 13 }}>Tem {c.active}; uma cidade parecida teria cerca de {c.expected}</Text></View>
+        </View>)}
+      </View> : null}
+      {opp.activities.length ? <View style={{ gap: 8 }}>
+        <Text style={{ color: palette.muted, fontWeight: "800", fontSize: 12, letterSpacing: 1 }}>{`OUTROS NEGÓCIOS COM ESPAÇO EM ${place.toUpperCase()}`}</Text>
+        {opp.activities.map((a) => <View key={a.id} style={{ flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: palette.paper, borderRadius: 16, padding: 12 }}>
+          <Ionicons name="storefront" size={18} color={palette.brandText} />
+          <View style={{ flex: 1 }}><Text style={{ color: palette.ink, fontWeight: "800", fontSize: 16 }}>{a.name}</Text><Text style={{ color: palette.muted, fontSize: 13 }}>Tem {a.active}; uma cidade parecida teria cerca de {a.expected}</Text></View>
+        </View>)}
+      </View> : null}
+      <Body size={13}>Menos negócios que o esperado pode ser espaço livre ou pouca procura. Vale visitar antes de decidir.</Body>
+    </Card> : null}
 
     {/* Próximos passos */}
     <Card>
