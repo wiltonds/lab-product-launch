@@ -31,7 +31,7 @@ from lab.config import AUDIT, PROC, PUB  # noqa: E402
 from lab.compacto import GRANDES, compactar  # noqa: E402
 from lab.publicacao import FORMATO, montar  # noqa: E402
 
-VERSAO = "0.3.0"
+VERSAO = "0.5.0"
 ANTIGOS = ["fluxo.parquet", "vida.parquet", "populacao.parquet"]   # formato 1 (só AL)
 
 
@@ -52,6 +52,8 @@ def main() -> None:
     for nome in ("municipios", "ativos", "movimento", "sobrevivencia", "sobrevivencia_uf", "saturacao"):
         t = compactar(r[nome], nome) if nome in GRANDES else r[nome]
         t.to_parquet(PUB / f"{nome}.parquet", index=False, compression="zstd")
+    for nome in ("bairros", "bairros_total"):
+        r[nome].to_parquet(PUB / f"{nome}.parquet", index=False, compression="zstd")
     if (d / "cnaes.parquet").exists():
         pd.read_parquet(d / "cnaes.parquet").to_parquet(PUB / "cnaes.parquet", index=False)
 
@@ -63,6 +65,7 @@ def main() -> None:
             "municipios": int(r["municipios"]["cod_ibge"].nunique()),
             "municipios_com_cnpj": int(lig["cod_ibge"].nunique()),
             "modelos_saturacao": int(len(r["saturacao"])),
+            "bairros": int(len(r["bairros_total"])),
             "validacao": r["_validacao"],
             "fontes": {
                 "cnpj": "Receita Federal, dados abertos do CNPJ",

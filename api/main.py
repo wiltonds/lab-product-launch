@@ -39,7 +39,7 @@ except Exception:  # noqa: BLE001
 
 PUB = Path(os.environ.get("LAB_PUBLICADO", RAIZ / "data" / "publicado"))
 ATIVIDADES = json.loads((Path(__file__).parent / "atividades.json").read_text(encoding="utf-8"))["atividades"]
-VERSAO = "0.4.0"
+VERSAO = "0.5.0"
 TABELAS = ("municipios", "ativos", "movimento", "sobrevivencia", "sobrevivencia_uf", "saturacao")
 # Só as colunas usadas: o plano gratuito do Render tem 512 MB de memória.
 from lab.compacto import COLUNAS, GRANDES  # noqa: E402
@@ -64,6 +64,8 @@ def dados() -> dict:
         d[k] = _compactar(t) if k in GRANDES else t
         del t
         gc.collect()
+    for k in ("bairros", "bairros_total"):   # opcionais: edições antigas não têm
+        d[k] = pd.read_parquet(PUB / f"{k}.parquet") if (PUB / f"{k}.parquet").exists() else None
     d["cnaes"] = pd.read_parquet(PUB / "cnaes.parquet") if (PUB / "cnaes.parquet").exists() else None
     d["meta"] = m
     d = preparar(d)
@@ -115,6 +117,11 @@ def preparar(d: dict) -> dict:
         uf_num = pd.Series(t.index.values // 100000, index=t.index).map(sigla).values
         d[k + "_uf"] = t.groupby([uf_num, t["cnae_principal"].values]).sum(numeric_only=True).drop(columns="cnae_principal", errors="ignore")
         d[k + "_uf"].index.names = ["uf", "cnae_principal"]
+    for k in ("bairros", "bairros_total"):
+        t = d.get(k)
+        if t is not None and len(t):
+            t = t.assign(bairro=t["bairro"].astype("category")).set_index("cod_ibge").sort_index(kind="stable")
+        d[k] = t if t is not None and len(t) else None
     d["sobrevivencia_uf"] = d["sobrevivencia_uf"].assign(cnae_principal=lambda x: x["cnae_principal"].astype(int))
     d["saturacao"] = d["saturacao"].assign(cnae_principal=lambda x: x["cnae_principal"].astype(int)).set_index("cnae_principal")
     d["ref"] = pd.Timestamp(d["meta"]["data_referencia"])
@@ -336,6 +343,47 @@ def oportunidades(d, ativ, mun) -> dict:
     return out
 
 
+def _bairros_da_cidade(d: dict, cod: str) -> pd.DataFrame | None:
+    t = d.get("bairros_total")
+    if t is None or int(cod) not in t.index:
+        return None
+    return t.loc[[int(cod)]].astype({"bairro": str})
+
+
+def bairro_sinal(d, ativ, mun, bairro: str) -> dict | None:
+    """Negócios do ramo no bairro, a cada 100 empresas, comparado com a cidade.
+    Sem população por bairro, o total de empresas do bairro faz o papel de movimento comercial."""
+    tot = _bairros_da_cidade(d, mun["codigo"])
+    if tot is None:
+        return None
+    chave = normalizar_nome(bairro)
+    linha = tot[tot["bairro"].map(normalizar_nome) == chave]
+    if linha.empty:
+        return None
+    nome, empresas = linha.iloc[0]["bairro"], int(linha.iloc[0]["empresas"])
+    r = d["bairros"]
+    r = r.loc[[int(mun["codigo"])]] if r is not None and int(mun["codigo"]) in r.index else None
+    ramo = r[r["cnae_principal"].isin(ativ["_cnaes"])].astype({"bairro": str}) if r is not None else None
+    por_bairro = ramo.groupby("bairro")["ativos"].sum() if ramo is not None else pd.Series(dtype=int)
+    aqui = int(por_bairro.get(nome, 0))
+    base = {"id": "bairro", "title": f"No bairro {nome}", "confidence": "OBSERVADO", "sampleSize": empresas, "source": _fonte(d, "cnpj")}
+    if empresas < 30:
+        return base | {"verdict": "neutro", "headline": f"{_num(aqui)} {ativ['plural']} no bairro",
+                       "detail": "O bairro tem poucas empresas registradas para comparar com o resto da cidade."}
+    taxa = aqui / empresas * 100
+    taxa_cid = float(por_bairro.sum()) / float(tot["empresas"].sum()) * 100 if len(tot) else 0
+    v = "neutro" if taxa_cid == 0 else "favoravel" if taxa <= taxa_cid * 0.7 else "atencao" if taxa >= taxa_cid * 1.4 else "neutro"
+    grandes = tot[tot["empresas"] >= 50].set_index("bairro")["empresas"]
+    dens = (por_bairro.reindex(grandes.index, fill_value=0) / grandes * 100).sort_values()
+    menos = [b for b in dens.index if b != nome][:3]
+    detalhe = {"favoravel": "Menos concorrência no bairro do que no resto da cidade, para o tanto de comércio que ele tem.",
+               "atencao": "Mais concorrência no bairro do que no resto da cidade, para o tanto de comércio que ele tem.",
+               "neutro": "Concorrência no bairro parecida com a do resto da cidade."}[v]
+    return base | {"verdict": v, "headline": f"{_num(aqui)} {ativ['plural']} entre {_num(empresas)} empresas do bairro",
+                   "detail": detalhe + (f" Bairros com menos concorrência: {', '.join(menos)}." if menos else ""),
+                   "comparison": f"No bairro: {taxa:.1f} a cada 100 empresas. Na cidade: {taxa_cid:.1f}".replace(".", ",")}
+
+
 def _municipio(d: dict, codigo: str) -> dict:
     if codigo not in d["municipios"].index:
         raise HTTPException(404, "Município não encontrado.")
@@ -373,6 +421,21 @@ def municipios(busca: str = Query(..., min_length=2, max_length=60), limite: int
     return [{"codigo": r.cod_ibge, "nome": r.municipio, "uf": r.uf} for r in res.head(limite).itertuples()]
 
 
+@app.get("/v1/bairros")
+def bairros(municipio: str = Query(..., min_length=7, max_length=7), busca: str = Query("", max_length=60), limite: int = Query(40, ge=1, le=200)):
+    """Bairros da cidade, dos que têm mais empresas para os que têm menos. Lista vazia = cidade sem bairros nos dados."""
+    d = dados()
+    _municipio(d, municipio)
+    t = _bairros_da_cidade(d, municipio)
+    if t is None:
+        return []
+    t = t.sort_values("empresas", ascending=False)
+    if busca.strip():
+        q = normalizar_nome(busca)
+        t = t[t["bairro"].map(normalizar_nome).str.contains(q, regex=False)]
+    return [{"nome": r.bairro, "empresas": int(r.empresas)} for r in t.head(limite).itertuples()]
+
+
 LIMITACOES = [
     "Conta só empresas com CNPJ e com essa atividade como principal; negócios informais não aparecem, então a concorrência real costuma ser maior.",
     "CNPJ baixado ou inapto nem sempre é falência: pode ser mudança de ramo, de cidade ou de tipo de empresa.",
@@ -382,7 +445,8 @@ LIMITACOES = [
 
 
 @app.get("/v1/insights")
-def insights(municipio: str = Query(..., min_length=7, max_length=7), atividade: str = Query(..., max_length=40)):
+def insights(municipio: str = Query(..., min_length=7, max_length=7), atividade: str = Query(..., max_length=40),
+             bairro: str = Query("", max_length=80)):
     d = dados()
     ativ = next((a for a in ATIVIDADES if a["id"] == atividade), None)
     if ativ is None:
@@ -396,7 +460,8 @@ def insights(municipio: str = Query(..., min_length=7, max_length=7), atividade:
         limitacoes.append("Classificação de atividade (CNAE) em validação.")
     return {"municipalityCode": municipio, "activityId": atividade,
             "modelVersion": f"{VERSAO} · edição {d['meta']['edicao']}", "generatedAt": d["meta"].get("gerado_em", ""),
-            "signals": [concorrencia(d, ativ, mun), espaco(d, ativ, mun), sobrevivencia(d, ativ, mun), movimento(d, ativ, mun)],
+            "signals": [s for s in [bairro_sinal(d, ativ, mun, bairro) if bairro.strip() else None, concorrencia(d, ativ, mun),
+                                    espaco(d, ativ, mun), sobrevivencia(d, ativ, mun), movimento(d, ativ, mun)] if s],
             "marketScore": notas_de_mercado(d, ativ, mun),
             "opportunities": oportunidades(d, ativ, mun),
             "limitations": limitacoes}

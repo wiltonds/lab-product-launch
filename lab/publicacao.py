@@ -10,7 +10,11 @@ from pathlib import Path
 import pandas as pd
 import pyarrow.parquet as pq
 
-from lab import brasil, estatistica, validacao
+import json
+
+from lab import bairros, brasil, estatistica, validacao
+
+CNAES_APP = sorted({int(c) for a in json.loads((Path(__file__).resolve().parent.parent / "api" / "atividades.json").read_text(encoding="utf-8"))["atividades"] for c in a["cnaes"]})
 
 FORMATO = 2
 
@@ -49,9 +53,10 @@ def montar(pasta_estab: Path, muni_receita: pd.DataFrame, pop: pd.DataFrame, pib
     ref = ref or data_referencia(pasta_estab)
     partes = {"ativos": [], "movimento": [], "sobrevivencia": [], "val_treino": [], "val_teste": []}
     ligacoes, sem_par, coortes = [], [], None
+    b_ramo, b_total = [], []
     for arq in sorted(pasta_estab.glob("uf=*.parquet")):
         uf = arq.stem.split("=")[1]
-        est = pd.read_parquet(arq)
+        est = pd.read_parquet(arq, columns=brasil.COLS_AGREGADO)
         pares = pd.DataFrame({"uf": uf, "municipio_receita": est["municipio_receita"].unique()})
         lig, sem = brasil.ligar_municipios(pares, muni_receita, muni[muni["uf"] == uf])
         ligacoes.append(lig.assign(uf=uf))
@@ -62,6 +67,10 @@ def montar(pasta_estab: Path, muni_receita: pd.DataFrame, pop: pd.DataFrame, pib
         coortes = ag["coortes"]
         log(f"  {uf}: {len(est):,} estabelecimentos, {lig['cod_ibge'].nunique()} municípios ligados, {len(sem)} sem par")
         del est
+        if "bairro" in pq.read_schema(arq).names:   # edições antigas não têm bairro
+            r, t = bairros.agregar_bairros(bairros.ler_ativos(arq), lig, CNAES_APP)
+            b_ramo.append(r)
+            b_total.append(t)
     out = {k: pd.concat(v, ignore_index=True) for k, v in partes.items()}
     sob = out.pop("sobrevivencia")
     sob["uf"] = brasil.uf_do_codigo(sob["cod_ibge"])
@@ -77,6 +86,10 @@ def montar(pasta_estab: Path, muni_receita: pd.DataFrame, pop: pd.DataFrame, pib
     out["_validacao"] = {"sobrevivencia": validacao.validar_sobrevivencia(tr, te),
                          "espaco_no_mercado": validacao.validar_saturacao(out["ativos"], muni_mod, out["saturacao"])}
     out["municipios"] = muni
+    vazio_r = pd.DataFrame({"cod_ibge": pd.Series(dtype="int32"), "bairro": pd.Series(dtype=str), "cnae_principal": pd.Series(dtype="int32"), "ativos": pd.Series(dtype="int32")})
+    vazio_t = pd.DataFrame({"cod_ibge": pd.Series(dtype="int32"), "bairro": pd.Series(dtype=str), "empresas": pd.Series(dtype="int32")})
+    out["bairros"] = pd.concat(b_ramo, ignore_index=True) if b_ramo else vazio_r
+    out["bairros_total"] = pd.concat(b_total, ignore_index=True) if b_total else vazio_t
     out["ligacao"] = pd.concat(ligacoes, ignore_index=True)
     out["sem_par"] = pd.concat(sem_par, ignore_index=True)
     out["_ref"] = ref

@@ -7,7 +7,8 @@ import { useAppData } from "@/hooks/use-app-data";
 import { BUSINESS_CATEGORIES } from "@/shared/catalog";
 import { formatMoney } from "@/shared/format";
 import { validateName } from "@/shared/validation";
-import { citiesOf, searchCities, stateName, STATES, type City } from "@/shared/cities";
+import { citiesOf, norm, searchCities, stateName, STATES, type City } from "@/shared/cities";
+import { fetchNeighborhoods } from "@/shared/insights";
 const ACTIVITIES = BUSINESS_CATEGORIES.flatMap((c) => c.activities.map((a) => ({ ...a, category: c.id })));
 
 const MOTIVATION = [
@@ -47,6 +48,8 @@ export default function OnboardingScreen() {
   const [name, setName] = useState(data.profile.name);
   const [query, setQuery] = useState("");
   const [ufPick, setUfPick] = useState("");
+  const [hoodCity, setHoodCity] = useState<City | null>(null);
+  const [hoods, setHoods] = useState<{ name: string; companies: number }[]>([]);
   const [building, setBuilding] = useState(false);
   const [error, setError] = useState("");
 
@@ -64,8 +67,14 @@ export default function OnboardingScreen() {
   };
   const pickCity = (city: City | undefined) => {
     if (!city) return;
-    void update({ idea: { ...data.idea, municipality: city.name, municipalityCode: city.code, municipalityUf: city.uf, outsideState: "" } });
-    setQuery(""); advance();
+    void update({ idea: { ...data.idea, municipality: city.name, municipalityCode: city.code, municipalityUf: city.uf, neighborhood: "", outsideState: "" } });
+    setQuery("");
+    // Bairro é opcional: só pergunta se a cidade tiver bairros nos dados.
+    void fetchNeighborhoods(city.code).then((bs) => { if (bs.length >= 3) { setHoods(bs); setHoodCity(city); } else advance(); });
+  };
+  const pickHood = (name: string) => {
+    void update({ idea: { ...data.idea, neighborhood: name } });
+    setHoodCity(null); setQuery(""); advance();
   };
   const finish = () => {
     if (!data.profile.termsAccepted) { setError("Para ver o resultado, aceite os termos de uso."); return; }
@@ -142,7 +151,21 @@ export default function OnboardingScreen() {
         <View style={{ gap: 10 }}>{EXPERIENCE.map((x) => <Choice key={x} label={x} selected={data.profile.experience === x} onPress={() => { setProfile({ experience: x }); advance(); }} />)}</View>
       </> : null}
 
-      {step === 5 ? (!ufPick ? <>
+      {step === 5 && hoodCity ? <>
+        <Heading>Em qual bairro de {hoodCity.name}?</Heading>
+        <Body>Se ainda não sabe, pode pular.</Body>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: palette.white, borderRadius: 18, paddingHorizontal: 16, borderWidth: 2, borderColor: palette.line }}>
+          <Ionicons name="search" size={18} color={palette.muted} />
+          <TextInput value={query} onChangeText={setQuery} placeholder="Buscar bairro" placeholderTextColor={palette.faint} style={{ flex: 1, paddingVertical: 16, fontSize: 16, color: palette.ink }} accessibilityLabel={`Buscar bairro de ${hoodCity.name}`} />
+        </View>
+        {hoods.filter((b) => !query.trim() || norm(b.name).includes(norm(query))).slice(0, 12).map((b) => <Pressable key={b.name} onPress={() => pickHood(b.name)} accessibilityRole="button" style={{ flexDirection: "row", alignItems: "center", gap: 12, minHeight: 52, paddingHorizontal: 6, borderBottomWidth: 1, borderBottomColor: palette.line }}>
+          <Ionicons name="location" size={18} color={palette.brandText} />
+          <Text style={{ fontSize: 16, color: palette.ink, flex: 1 }}>{b.name}</Text>
+          <Ionicons name="chevron-forward" size={16} color={palette.faint} />
+        </Pressable>)}
+        <Pressable onPress={() => { setHoodCity(null); setQuery(""); advance(); }} accessibilityRole="button" style={{ alignSelf: "center", padding: 12 }}><Text style={{ color: palette.brandText, fontWeight: "700", fontSize: 16 }}>Pular, ainda não sei o bairro</Text></Pressable>
+      </> : null}
+      {step === 5 && !hoodCity ? (!ufPick ? <>
         <Heading>Em qual estado?</Heading>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: palette.white, borderRadius: 18, paddingHorizontal: 16, borderWidth: 2, borderColor: palette.line }}>
           <Ionicons name="search" size={18} color={palette.muted} />

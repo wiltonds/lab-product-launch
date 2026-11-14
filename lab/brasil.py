@@ -34,10 +34,12 @@ NOME_UF = {"RO": "Rondônia", "AC": "Acre", "AM": "Amazonas", "RR": "Roraima", "
            "MT": "Mato Grosso", "GO": "Goiás", "DF": "Distrito Federal"}
 REGIAO = {"1": "Norte", "2": "Nordeste", "3": "Sudeste", "4": "Sul", "5": "Centro-Oeste"}
 
-COLS = ["matriz_filial", "situacao", "data_situacao", "data_inicio", "cnae_principal", "uf", "municipio_receita"]
+COLS = ["matriz_filial", "situacao", "data_situacao", "data_inicio", "cnae_principal", "bairro", "cep", "uf", "municipio_receita"]
+COLS_AGREGADO = ["matriz_filial", "situacao", "data_situacao", "data_inicio", "cnae_principal", "municipio_receita"]
 SCHEMA = pa.schema([("matriz_filial", pa.int8()), ("situacao", pa.int8()),
                     ("data_situacao", pa.timestamp("s")), ("data_inicio", pa.timestamp("s")),
-                    ("cnae_principal", pa.int32()), ("municipio_receita", pa.int32())])
+                    ("cnae_principal", pa.int32()), ("bairro", pa.string()), ("cep", pa.int32()),
+                    ("municipio_receita", pa.int32())])
 FECHADA = [BAIXADA, INAPTA]   # definição ampla de fechamento (inapta costuma ser negócio abandonado)
 HORIZONTE = 24                # meses
 COORTES = 5                   # coortes completas usadas na sobrevivência
@@ -56,6 +58,8 @@ def tipar(ch: pd.DataFrame) -> pd.DataFrame:
         "data_situacao": data_receita(ch["data_situacao"]).astype("datetime64[s]"),
         "data_inicio": data_receita(ch["data_inicio"]).astype("datetime64[s]"),
         "cnae_principal": _int(ch["cnae_principal"], "int32"),
+        "bairro": ch["bairro"].fillna("").str.strip(),   # só o nome do bairro; rua e número ficam de fora
+        "cep": _int(ch["cep"], "int32"),
         "uf": ch["uf"].str.strip(),
         "municipio_receita": _int(ch["municipio_receita"], "int32"),
     })
@@ -86,7 +90,7 @@ def particionar(zips: Iterable[Path], destino: Path, bloco: int = 1_000_000) -> 
 
 
 def ler_uf(origem: Path, uf: str) -> pd.DataFrame:
-    return pd.read_parquet(origem / f"uf={uf}.parquet")
+    return pd.read_parquet(origem / f"uf={uf}.parquet", columns=COLS_AGREGADO)
 
 
 # ---------------------------------------------------------------- municípios: Receita → IBGE

@@ -75,7 +75,7 @@ export const MISSIONS: Mission[] = [
 
 export type AppData = {
   profile: { name: string; whatsapp: string; email: string; motivation: string; stage: string; experience: string; verified: boolean; status: string; ageRange: string; homeCity: string; investable: number; reserve: number; personalMonthly: number; openingWhen: string; marketingConsent: boolean; termsAccepted: boolean };
-  idea: { category: string; activity: string; municipality: string; municipalityCode: string; municipalityUf?: string; propertyFound: string; equipment: string; team: string; keepJob: string; outsideState: string };
+  idea: { category: string; activity: string; municipality: string; municipalityCode: string; municipalityUf?: string; neighborhood?: string; propertyFound: string; equipment: string; team: string; keepJob: string; outsideState: string };
   finance: FinanceInputs;
   completedMissions: string[];
   salesTests: { days: number; approached: number; interested: number; intendToBuy: number; bought: number; price: number; createdAt: string }[];
