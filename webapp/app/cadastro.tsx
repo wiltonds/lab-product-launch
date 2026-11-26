@@ -30,7 +30,13 @@ export default function CadastroScreen() {
   const [email, setEmail] = useState(data.profile.email);
   const [city, setCity] = useState(data.idea.municipality || data.profile.homeCity);
   const [cityOpen, setCityOpen] = useState(false);
-  const [picked, setPicked] = useState<City | null>(findCity(data.idea.municipalityCode) ?? null);
+  const [picked, setPicked] = useState<City | null>(() => {
+    const byCode = findCity(data.idea.municipalityCode);
+    if (byCode) return byCode;
+    const name0 = (data.idea.municipality || data.profile.homeCity || "").trim().toLowerCase();
+    if (!name0) return null;
+    return searchCities(name0, { limit: 5 }).find((c) => c.name.toLowerCase() === name0) ?? null;
+  });
   const [consent, setConsent] = useState(data.profile.marketingConsent);
   const [code, setCode] = useState("");
   const [touched, setTouched] = useState(false);
@@ -108,8 +114,8 @@ export default function CadastroScreen() {
       {mode === "criar" ? <>
         <Input label="WhatsApp" icon="logo-whatsapp" value={whatsapp} onChangeText={(v) => setWhatsapp(maskWhatsapp(v))} placeholder="(82) 9 9999-9999" keyboardType="phone-pad" error={show(errors.whatsapp)} />
         <View style={{ gap: 6 }}>
-          <Input label="Seu município" icon="location-outline" value={city} onChangeText={(v) => { setCity(v); setCityOpen(true); }} placeholder="Ex.: Arapiraca" error={show(errors.city)} />
-          {cities.map((c) => <Pressable key={c.code} onPress={() => { setCity(c.name); setPicked(c); setCityOpen(false); }} style={{ paddingVertical: 11, paddingHorizontal: 14, backgroundColor: palette.white, borderRadius: 12 }}>
+          <Input label="Seu município" icon="location-outline" value={city} onFocus={() => setCityOpen(true)} selectTextOnFocus onChangeText={(v) => { setCity(v); setPicked(null); setCityOpen(true); }} placeholder="Ex.: Arapiraca" error={show(errors.city)} />
+          {cities.filter((c) => !(cityMatch && c.code === cityMatch.code)).map((c) => <Pressable key={c.code} onPress={() => { setCity(c.name); setPicked(c); setCityOpen(false); }} style={{ paddingVertical: 11, paddingHorizontal: 14, backgroundColor: palette.white, borderRadius: 12 }}>
             <Text style={{ color: palette.ink, fontSize: 15 }}>{c.name} <Text style={{ color: palette.muted }}>· {c.uf}</Text></Text>
           </Pressable>)}
         </View>
