@@ -62,5 +62,5 @@ export function validateName(raw: string): string | null {
 }
 
 export function validateCode(raw: string): string | null {
-  return /^\d{6}$/.test(onlyDigits(raw)) ? null : "O código tem 6 números.";
+  return /^\d{6,8}$/.test(onlyDigits(raw)) ? null : "Digite o código completo que chegou no e-mail.";
 }

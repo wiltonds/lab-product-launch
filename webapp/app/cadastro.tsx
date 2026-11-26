@@ -127,11 +127,11 @@ export default function CadastroScreen() {
     {stage === "codigo" ? <>
       <View style={{ width: 64, height: 64, borderRadius: 22, backgroundColor: palette.brandSoft, alignItems: "center", justifyContent: "center" }}><Ionicons name="mail-open-outline" size={30} color={palette.brand} /></View>
       <Heading>Confira seu e-mail</Heading>
-      <Body>Mandamos um código de 6 números para <Text style={{ fontWeight: "800", color: palette.ink }}>{normalizeEmail(email)}</Text>. Pode levar 1 minuto. Olhe também o spam.</Body>
-      <TextInput autoFocus value={code} onChangeText={(v) => setCode(onlyDigits(v).slice(0, 6))} placeholder="000000" placeholderTextColor={palette.faint} keyboardType="number-pad" maxLength={6} accessibilityLabel="Código de 6 números"
-        style={{ backgroundColor: palette.white, borderRadius: 18, paddingVertical: 18, fontSize: 32, fontWeight: "800", letterSpacing: 12, textAlign: "center", color: palette.ink, borderWidth: 2, borderColor: serverError ? palette.red : palette.line }} />
+      <Body>Mandamos um código para <Text style={{ fontWeight: "800", color: palette.ink }}>{normalizeEmail(email)}</Text>. Pode levar 1 minuto. Olhe também o spam.</Body>
+      <TextInput autoFocus value={code} onChangeText={(v) => setCode(onlyDigits(v).slice(0, 8))} placeholder="000000" placeholderTextColor={palette.faint} keyboardType="number-pad" maxLength={8} accessibilityLabel="Código do e-mail"
+        style={{ backgroundColor: palette.white, borderRadius: 18, paddingVertical: 18, fontSize: 32, fontWeight: "800", letterSpacing: 8, textAlign: "center", color: palette.ink, borderWidth: 2, borderColor: serverError ? palette.red : palette.line }} />
       {serverError ? <Text style={{ color: palette.red, fontWeight: "600" }}>{serverError}</Text> : null}
-      <Button title={busy ? "Confirmando…" : "Confirmar"} onPress={() => void confirm()} disabled={busy || code.length !== 6} />
+      <Button title={busy ? "Confirmando…" : "Confirmar"} onPress={() => void confirm()} disabled={busy || code.length < 6} />
       <Pressable onPress={() => void requestCode()} disabled={busy}><Text style={{ color: palette.brand, fontWeight: "700", textAlign: "center" }}>Reenviar código</Text></Pressable>
       <Pressable onPress={() => setStage("dados")}><Text style={{ color: palette.muted, textAlign: "center" }}>Corrigir e-mail</Text></Pressable>
     </> : null}

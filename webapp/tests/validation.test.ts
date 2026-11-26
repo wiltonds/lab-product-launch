@@ -38,5 +38,7 @@ describe("Nome e código", () => {
     expect(validateName("Will")).toBeNull();
     expect(validateCode("123456")).toBeNull();
     expect(validateCode("12345")).not.toBeNull();
+    expect(validateCode("12345678")).toBeNull();
+    expect(validateCode("123456789")).not.toBeNull();
   });
 });
