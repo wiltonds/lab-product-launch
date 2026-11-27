@@ -67,7 +67,7 @@ export default function ReportScreen() {
           {["Escolhe o ponto no olho", "Preço no chute", "Descobre o erro no 3º mês"].map((t) => <View key={t} style={{ flexDirection: "row", gap: 8 }}><Ionicons name="close-circle" size={18} color={palette.red} /><Text style={{ color: palette.ink, flex: 1, fontSize: 14 }}>{t}</Text></View>)}
         </View>
         <View style={{ flex: 1, backgroundColor: palette.white, borderRadius: 22, padding: 16, gap: 10, borderWidth: 2, borderColor: palette.green }}>
-          <Text style={{ color: palette.green, fontWeight: "800" }}>Com o Lab</Text>
+          <Text style={{ color: palette.green, fontWeight: "800" }}>Com a gente</Text>
           {["Ponto escolhido com dados", "Preço que fecha a conta", "Erro corrigido antes de abrir"].map((t) => <View key={t} style={{ flexDirection: "row", gap: 8 }}><Ionicons name="checkmark-circle" size={18} color={palette.green} /><Text style={{ color: palette.ink, flex: 1, fontSize: 14 }}>{t}</Text></View>)}
         </View>
       </View>

@@ -186,14 +186,14 @@ export default function OnboardingScreen() {
         <Pressable onPress={() => { setUfPick(""); setQuery(""); }} accessibilityRole="button" style={{ flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-start" }}>
           <Ionicons name="swap-horizontal" size={16} color={palette.brandText} /><Text style={{ color: palette.brandText, fontWeight: "700" }}>Trocar estado</Text>
         </Pressable>
-        <Heading>Em qual cidade de {stateName(ufPick)}?</Heading>
+        <Heading>Em qual cidade {prepEstado(ufPick)}?</Heading>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: palette.white, borderRadius: 18, paddingHorizontal: 16, borderWidth: 2, borderColor: palette.line }}>
           <Ionicons name="search" size={18} color={palette.muted} />
           <TextInput value={query} onChangeText={setQuery} autoFocus placeholder={`Buscar entre ${citiesOf(ufPick)} cidades`} placeholderTextColor={palette.faint} style={{ flex: 1, paddingVertical: 16, fontSize: 16, color: palette.ink }} accessibilityLabel={`Buscar cidade de ${stateName(ufPick)}`} />
         </View>
         {!query ? <Text style={{ color: palette.muted, fontWeight: "800", fontSize: 12, letterSpacing: 1 }}>MAIORES CIDADES</Text> : null}
         {cities.map((c) => <CityRow key={c.code} city={c} onPress={() => pickCity(c)} />)}
-        {query && cities.length === 0 ? <Body>Nenhuma cidade de {stateName(ufPick)} com esse nome. Confira a grafia.</Body> : null}
+        {query && cities.length === 0 ? <Body>Nenhuma cidade {prepEstado(ufPick)} com esse nome. Confira a grafia.</Body> : null}
       </>) : null}
 
       {step === 6 ? <>
@@ -249,6 +249,13 @@ export default function OnboardingScreen() {
       {AUTO.has(step) || step === 3 || step === 5 ? <Text style={{ textAlign: "center", color: palette.faint, fontSize: 13 }}>Toque numa opção para seguir</Text> : null}
     </Page></ScrollView>
   </View>;
+}
+
+/** "da Paraíba", "do Ceará", "de Alagoas", "de Minas Gerais". */
+function prepEstado(uf: string): string {
+  const nome = stateName(uf);
+  const da = ["BA", "PB"], de = ["AL", "GO", "MG", "MT", "MS", "PE", "RO", "RR", "SC", "SE", "SP", "TO"];
+  return (da.includes(uf) ? "da " : de.includes(uf) ? "de " : "do ") + nome;
 }
 
 function CityRow({ city, onPress, showUf = false }: { city: City; onPress: () => void; showUf?: boolean }) {
