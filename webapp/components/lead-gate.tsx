@@ -68,7 +68,7 @@ export function LeadGate({ indice, children }: { indice: number | null; children
     <TopBar />
     <Eyebrow>SEU PLANO DE NEGÓCIO</Eyebrow>
     <Heading>Receba o plano completo da sua {negocio}{cidade ? ` em ${cidade}` : ""}.</Heading>
-    <Body>Sumário, mercado da sua cidade, modelo de negócio, operação, financeiro de 12 meses, cenários, riscos e os primeiros 90 dias. Em PDF, para imprimir ou mostrar a quem vai te ajudar.</Body>
+    <Body>Sumário, mercado da sua cidade, modelo de negócio, operação, financeiro de 12 meses, cenários, riscos e os primeiros 90 dias. Na tela, para mexer nos números, e em PDF, para imprimir ou mostrar a quem vai te ajudar.</Body>
     <Card>
       <Field label="Seu nome" value={nome} onChangeText={setNome} placeholder="Como podemos te chamar" error={tentou ? erros.nome ?? undefined : undefined} />
       <Field label="Seu WhatsApp" value={whatsapp} onChangeText={(v) => setWhatsapp(maskWhatsapp(v))} placeholder="(82) 9 9999-9999" keyboardType="phone-pad" error={tentou ? erros.whatsapp ?? undefined : undefined} />

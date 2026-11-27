@@ -6,6 +6,8 @@ import { Body, Button, Card, Eyebrow, Heading, LinkButton, Page, Stepper, palett
 import { useAppData } from "@/hooks/use-app-data";
 import { useMunicipalInsights } from "@/hooks/use-municipal-insights";
 import { TopBar } from "@/components/top-bar";
+import { LeadGate } from "@/components/lead-gate";
+import { computeIndice } from "@/shared/indice";
 import { registrarEvento } from "@/shared/leads";
 import { activityIdOf, alavancasIniciais, brl, gerarPlano, num1, type Alavancas, type Item } from "@/shared/plano";
 
@@ -27,8 +29,10 @@ export default function PlanoScreen() {
   const un = plano.molde?.unidadePlural ?? "vendas";
   const set = (k: keyof Alavancas) => (v: number) => setAlav({ ...alav, [k]: v });
   const maxAbs = Math.max(1, ...plano.meses.map((m) => Math.abs(m.sobra)));
+  const indice = computeIndice(data, ins?.marketScore ?? null, plano).score;
 
-  return <ScrollView style={{ backgroundColor: palette.paper }} contentContainerStyle={{ paddingBottom: 48 }}>
+  // A troca do MVP: o plano completo (na tela e em PDF) em troca de nome + WhatsApp. A análise no início continua livre.
+  return <LeadGate indice={indice}><ScrollView style={{ backgroundColor: palette.paper }} contentContainerStyle={{ paddingBottom: 48 }}>
     <View style={{ backgroundColor: palette.navy, paddingTop: 24, paddingBottom: 20 }}>
       <Page style={{ gap: 8, backgroundColor: "transparent" }}>
         <TopBar dark right={<Button title="PDF" icon="download-outline" onPress={() => router.push("/plano-pdf")} />} />
@@ -117,7 +121,7 @@ export default function PlanoScreen() {
 
       <Body size={12}>Simulação com números de partida do ramo (a calibrar) e dados públicos da Receita Federal e do IBGE. Não é promessa de resultado.</Body>
     </Page>
-  </ScrollView>;
+  </ScrollView></LeadGate>;
 }
 
 function Num({ valor, legenda, cor = palette.navy }: { valor: string; legenda: string; cor?: string }) {
