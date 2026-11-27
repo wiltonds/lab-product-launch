@@ -64,3 +64,37 @@ export function validateName(raw: string): string | null {
 export function validateCode(raw: string): string | null {
   return /^\d{6,8}$/.test(onlyDigits(raw)) ? null : "Digite o código completo que chegou no e-mail.";
 }
+
+/** Teste com clientes: os campos como a pessoa digitou. */
+export type TesteVendasForm = { days: string; approached: string; interested: string; intent: string; bought: string; price: string };
+export type TesteVendas = { days: number; approached: number; interested: number; intendToBuy: number; bought: number; price: number };
+
+const inteiro = (s: string): number | null => (/^\d+$/.test(s.trim()) ? Number(s.trim()) : null);
+const dinheiro = (s: string): number | null => {
+  const limpo = s.trim().replace(/^R\$\s*/i, "");
+  // "1.250,50" e "18,5" (jeito brasileiro) ou "18.5" (teclado numérico com ponto).
+  const t = limpo.includes(",") ? limpo.replace(/\./g, "").replace(",", ".") : /^\d+\.\d{1,2}$/.test(limpo) ? limpo : limpo.replace(/\./g, "");
+  return /^\d+(\.\d{1,2})?$/.test(t) ? Number(t) : null;
+};
+
+/**
+ * Valida o teste com clientes. Cada etapa do funil não pode passar da anterior
+ * (abordadas ≥ interessadas ≥ disseram que comprariam; compraram ≤ abordadas).
+ */
+export function validarTesteVendas(f: TesteVendasForm): { erros: Partial<Record<keyof TesteVendasForm, string>>; valores: TesteVendas | null } {
+  const erros: Partial<Record<keyof TesteVendasForm, string>> = {};
+  const days = inteiro(f.days), approached = inteiro(f.approached), interested = inteiro(f.interested);
+  const intent = inteiro(f.intent), bought = inteiro(f.bought), price = dinheiro(f.price);
+  if (days === null || days < 1 || days > 365) erros.days = "Informe quantos dias, de 1 a 365.";
+  if (approached === null || approached < 1) erros.approached = "Informe quantas pessoas você abordou (pelo menos 1).";
+  if (interested === null) erros.interested = "Informe um número (pode ser 0).";
+  else if (approached !== null && interested > approached) erros.interested = "Não pode ser maior que as pessoas abordadas.";
+  if (intent === null) erros.intent = "Informe um número (pode ser 0).";
+  else if (interested !== null && intent > interested) erros.intent = "Não pode ser maior que as interessadas.";
+  if (bought === null) erros.bought = "Informe um número (pode ser 0).";
+  else if (approached !== null && bought > approached) erros.bought = "Não pode ser maior que as pessoas abordadas.";
+  if (price === null || price <= 0) erros.price = "Informe o preço em reais. Ex.: 18 ou 18,50.";
+  else if (price > 100000) erros.price = "Esse preço parece alto demais. Confira o valor.";
+  const ok = Object.keys(erros).length === 0;
+  return { erros, valores: ok ? { days: days!, approached: approached!, interested: interested!, intendToBuy: intent!, bought: bought!, price: price! } : null };
+}

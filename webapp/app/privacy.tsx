@@ -1,6 +1,7 @@
 import { Alert, Platform, ScrollView, Share, Text } from "react-native";
 import { Body, Button, Card, Eyebrow, Heading, Page, SectionTitle, palette } from "@/components/lab-ui";
 import { useAppData } from "@/hooks/use-app-data";
+import { TopBar } from "@/components/top-bar";
 
 function notify(title: string, message: string) {
   if (Platform.OS === "web" && typeof window !== "undefined") window.alert(`${title}\n\n${message}`);
@@ -30,10 +31,10 @@ export default function PrivacyScreen() {
       { text: "Registrar solicitação", style: "destructive", onPress: saveDeletionRequest },
     ]);
   };
-  return <ScrollView style={{ flex: 1, backgroundColor: palette.paper }}><Page><Eyebrow>PRIVACIDADE</Eyebrow><Heading>Seus dados pertencem a você.</Heading><Body>Veja o que está salvo neste planejamento e escolha o próximo passo.</Body>
+  return <ScrollView style={{ flex: 1, backgroundColor: palette.paper }}><Page><TopBar /><Eyebrow>PRIVACIDADE</Eyebrow><Heading>Seus dados pertencem a você.</Heading><Body>Veja o que está salvo neste planejamento e escolha o próximo passo.</Body>
     <Card><SectionTitle title="Exportar dados" subtitle={isAuthenticated ? "Busca os dados salvos na conta e inclui as alterações locais recentes." : "Compartilha o rascunho salvo localmente neste aparelho."} /><Button title="Compartilhar meus dados" onPress={() => void exportData()} secondary /></Card>
     <Card><SectionTitle title="Solicitar exclusão" subtitle="Uma solicitação fica registrada para tratamento; esta versão não remove automaticamente sua conta ou os dados do servidor." /><Button title="Registrar pedido de exclusão" onPress={requestDeletion} secondary /></Card>
-    <Card><SectionTitle title="Termos e política" /><Text style={{ color: palette.muted, lineHeight: 21 }}>Os dados profissionais e financeiros informados servem para organizar cenários e atividades. Conteúdo e ofertas são opcionais. O WhatsApp não é verificado nem usado para mensagens nesta versão. Dados sincronizados ficam associados à conta Manus quando você entra.</Text></Card>
+    <Card><SectionTitle title="Termos e política" /><Text style={{ color: palette.muted, lineHeight: 21 }}>As respostas da análise (negócio, cidade, dinheiro e situação) ficam salvas neste aparelho e servem para montar seus números. Quando você pede o plano em PDF, enviamos ao Vinga seu nome, WhatsApp, cidade, ramo e o resumo da análise, para entregar o plano e conversar com você sobre o seu negócio. Dicas e novidades só chegam se você marcar essa opção. Não vendemos nem repassamos seus dados. Para corrigir ou apagar seus dados, use o pedido de exclusão abaixo ou responda a nossa mensagem no WhatsApp.</Text></Card>
     <Card><SectionTitle title="Como calculamos e limites dos dados" /><Text style={{ color: palette.muted, lineHeight: 21 }}>{"A análise usa dados públicos da Receita Federal (CNPJ) e do IBGE, mais os números que você informa. Ela é uma estimativa para ajudar a decidir, não uma garantia de resultado.\n\n• Negócios sem CNPJ não aparecem, então a concorrência real costuma ser maior.\n• CNPJ baixado nem sempre é falência: pode ser mudança de ramo, de cidade ou de tipo de empresa.\n• Algumas empresas se registram com a atividade errada.\n• Os números descrevem o passado do setor. Não são previsão do seu resultado.\n• A análise não substitui orientação contábil, jurídica ou financeira."}</Text></Card>
     <Card><SectionTitle title="Solicitações registradas" />{data.privacyRequests.length ? data.privacyRequests.map((request, i) => <Text key={`${request.createdAt}-${i}`} style={{ color: palette.ink, paddingVertical: 7, borderBottomWidth: 1, borderBottomColor: palette.line }}>{request.type === "export" ? "Exportação" : "Exclusão"} · {new Date(request.createdAt).toLocaleDateString("pt-BR")} · solicitada</Text>) : <Body>Nenhuma solicitação registrada.</Body>}</Card>
     <Text style={{ color: palette.muted, fontSize: 12, lineHeight: 18 }}>Solicitações de exclusão sincronizadas com a conta exigem atendimento operacional até existir um fluxo automático de exclusão.</Text>

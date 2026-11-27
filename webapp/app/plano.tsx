@@ -1,16 +1,19 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { ScrollView, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Body, Button, Card, Eyebrow, Heading, LinkButton, Page, Stepper, palette, numStyle } from "@/components/lab-ui";
 import { useAppData } from "@/hooks/use-app-data";
 import { useMunicipalInsights } from "@/hooks/use-municipal-insights";
+import { TopBar } from "@/components/top-bar";
+import { registrarEvento } from "@/shared/leads";
 import { activityIdOf, alavancasIniciais, brl, gerarPlano, num1, type Alavancas, type Item } from "@/shared/plano";
 
 /** Plano de negócio vivo: a pessoa mexe nos números e vê o plano mudar. */
 export default function PlanoScreen() {
   const router = useRouter();
   const { data, ready, update } = useAppData();
+  useEffect(() => { void registrarEvento("abriu_plano", { atividade: data.idea.activity, municipioCodigo: data.idea.municipalityCode }); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const insights = useMunicipalInsights(data.idea.outsideState ? "" : data.idea.municipalityCode, activityIdOf(data) ?? "", data.idea.neighborhood ?? "");
   // Os ajustes ficam guardados (data.plano): o início, o PDF e a próxima visita usam os mesmos números.
   const alav = ready ? alavancasIniciais(data) : null;
@@ -28,10 +31,7 @@ export default function PlanoScreen() {
   return <ScrollView style={{ backgroundColor: palette.paper }} contentContainerStyle={{ paddingBottom: 48 }}>
     <View style={{ backgroundColor: palette.navy, paddingTop: 24, paddingBottom: 20 }}>
       <Page style={{ gap: 8, backgroundColor: "transparent" }}>
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-          <LinkButton title="← Voltar" color="#cfd9ea" onPress={() => router.back()} />
-          <Button title="Baixar PDF" icon="download-outline" onPress={() => router.push("/plano-pdf")} />
-        </View>
+        <TopBar dark right={<Button title="PDF" icon="download-outline" onPress={() => router.push("/plano-pdf")} />} />
         <Eyebrow color={palette.lime}>SEU PLANO DE NEGÓCIO</Eyebrow>
         <Heading color={palette.white}>{plano.negocio}{plano.emCasa ? " em casa" : ""}</Heading>
         <Body color="#cfd9ea">{[data.profile.name, plano.bairro, `${plano.cidade}${plano.uf ? ` (${plano.uf})` : ""}`].filter(Boolean).join(" · ")}</Body>

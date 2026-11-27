@@ -3,6 +3,7 @@ import { ScrollView, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { Body, Button, Card, Choice, Eyebrow, Heading, Page, SectionTitle, Tag, palette } from "@/components/lab-ui";
 import { useAppData } from "@/hooks/use-app-data";
+import { TopBar } from "@/components/top-bar";
 
 const dayLabels = ["Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira"];
 const times = ["09:00", "11:00", "14:00", "16:00"];
@@ -19,7 +20,7 @@ export default function MentorshipScreen() {
     await update({ mentorshipRequests: [...data.mentorshipRequests, { date: date.toISOString().slice(0, 10), time, status: "pendente", createdAt: new Date().toISOString() }] });
     router.back();
   };
-  return <ScrollView style={{ flex: 1, backgroundColor: palette.paper }}><Page><Eyebrow>MENTORIA</Eyebrow><Heading>Converse sobre suas decisões.</Heading><Body>Escolha uma sugestão de horário para registrar um pedido. Não há integração com agenda externa nesta versão.</Body>
+  return <ScrollView style={{ flex: 1, backgroundColor: palette.paper }}><Page><TopBar /><Eyebrow>MENTORIA</Eyebrow><Heading>Converse sobre suas decisões.</Heading><Body>Escolha uma sugestão de horário para registrar um pedido. Não há integração com agenda externa nesta versão.</Body>
     <Card><Tag tone="attention">HORÁRIOS DEMONSTRATIVOS</Tag><SectionTitle title="Dia da semana de preferência" />{dayLabels.map((value) => <Choice key={value} label={value} selected={day === value} onPress={() => setDay(value)} />)}</Card>
     <Card><SectionTitle title="Horário de preferência" />{times.map((value) => <Choice key={value} label={value} selected={time === value} onPress={() => setTime(value)} />)}</Card>
     <Button title="Registrar pedido de horário" onPress={() => void submit()} disabled={!day || !time} />

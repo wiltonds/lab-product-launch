@@ -1,0 +1,52 @@
+# Confere o código a cada envio, na nuvem do GitHub (sem precisar de Node ou Python no seu computador).
+# web app: TypeScript, testes (vitest) e o mesmo build web que o Render faz. API e motor: pytest.
+name: Verificar
+
+on:
+  push:
+    branches-ignore: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: verificar-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  webapp:
+    name: Web app (TypeScript, testes e build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: webapp
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: webapp/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: webapp/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - name: TypeScript
+        run: pnpm check
+      - name: Testes
+        run: pnpm test
+      - name: Build web (igual ao Render)
+        run: pnpm exec expo export --platform web --output-dir dist --clear
+        env:
+          EXPO_PUBLIC_INSIGHTS_API_URL: https://lab-dados-api.onrender.com
+
+  python:
+    name: API e motor (pytest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt -r requirements-dev.txt -r api/requirements.txt
+      - run: pytest -q

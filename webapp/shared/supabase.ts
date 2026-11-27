@@ -64,6 +64,18 @@ export async function savePerfil(perfil: Perfil): Promise<string | null> {
   return error ? "Conta criada, mas não conseguimos salvar seus dados. Tente de novo." : null;
 }
 
+export type Interesse = { produto: string; atividade: string; municipio: string; municipio_codigo: string; valor_em_jogo: number };
+
+/** Grava o pedido de quem clicou em comprar (tabela `interesses`, ver supabase/interesses.sql). Sem isso, o interesse se perdia. */
+export async function registrarInteresse(i: Interesse): Promise<string | null> {
+  const sb = supabase();
+  if (!sb) return "Cadastro ainda não configurado.";
+  const { data } = await sb.auth.getUser();
+  if (!data.user) return "Sessão expirada. Entre de novo.";
+  const { error } = await sb.from("interesses").insert({ usuario: data.user.id, email: data.user.email, ...i });
+  return error ? "Não conseguimos registrar agora. Tente de novo em instantes." : null;
+}
+
 export async function currentEmail(): Promise<string | null> {
   const sb = supabase();
   if (!sb) return null;

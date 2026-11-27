@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Body, Button, Heading, Page, palette } from "@/components/lab-ui";
 import { useAppData } from "@/hooks/use-app-data";
+import { TopBar } from "@/components/top-bar";
 import { savePerfil, sendCode, supabaseConfigured, verifyCode } from "@/shared/supabase";
 import { maskWhatsapp, normalizeEmail, onlyDigits, suggestEmail, validateCode, validateEmail, validateName, validateWhatsapp } from "@/shared/validation";
 import { findCity, searchCities, ufFromWhatsapp, type City } from "@/shared/cities";
@@ -103,16 +104,14 @@ export default function CadastroScreen() {
 
   if (!supabaseConfigured()) {
     return <ScrollView style={{ flex: 1, backgroundColor: palette.paper }}><Page style={{ paddingTop: 24 }}>
-      <Pressable onPress={() => router.back()} style={{ flexDirection: "row", alignItems: "center", gap: 6 }}><Ionicons name="arrow-back" size={20} color={palette.ink} /><Text style={{ color: palette.ink, fontWeight: "700" }}>Voltar</Text></Pressable>
+      <TopBar />
       <Heading>Contas chegam em breve</Heading>
       <Body>Estamos finalizando o cadastro com confirmação por e-mail. Sua análise continua salva neste aparelho.</Body>
     </Page></ScrollView>;
   }
 
   return <ScrollView style={{ flex: 1, backgroundColor: palette.paper }} keyboardShouldPersistTaps="handled"><Page style={{ paddingTop: 18 }}>
-    <Pressable onPress={() => (stage === "codigo" ? setStage("dados") : router.back())} hitSlop={10} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: palette.white, alignItems: "center", justifyContent: "center" }}>
-      <Ionicons name="arrow-back" size={20} color={palette.ink} />
-    </Pressable>
+    <TopBar onBack={stage === "codigo" ? () => setStage("dados") : undefined} />
 
     {stage === "dados" ? <>
       <View style={{ flexDirection: "row", backgroundColor: "#E9EBF2", borderRadius: 999, padding: 4 }}>

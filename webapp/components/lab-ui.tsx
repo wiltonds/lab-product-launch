@@ -52,8 +52,8 @@ export function LinkButton({ title, onPress, color = palette.brandText }: { titl
   </Pressable>;
 }
 
-export function Field({ label, value, onChangeText, placeholder, keyboardType = "default", multiline = false, helper }: { label: string; value: string; onChangeText: (value: string) => void; placeholder?: string; keyboardType?: TextInputProps["keyboardType"]; multiline?: boolean; helper?: string }) {
-  return <View style={styles.fieldWrap}><Text style={styles.label}>{label}</Text><TextInput accessibilityLabel={label} value={value} onChangeText={onChangeText} placeholder={placeholder} placeholderTextColor={palette.faint} keyboardType={keyboardType} multiline={multiline} style={[styles.input, multiline && { minHeight: 96, textAlignVertical: "top" }]} />{helper ? <Text style={styles.helper}>{helper}</Text> : null}</View>;
+export function Field({ label, value, onChangeText, placeholder, keyboardType = "default", multiline = false, helper, error }: { label: string; value: string; onChangeText: (value: string) => void; placeholder?: string; keyboardType?: TextInputProps["keyboardType"]; multiline?: boolean; helper?: string; error?: string }) {
+  return <View style={styles.fieldWrap}><Text style={styles.label}>{label}</Text><TextInput accessibilityLabel={label} value={value} onChangeText={onChangeText} placeholder={placeholder} placeholderTextColor={palette.faint} keyboardType={keyboardType} multiline={multiline} style={[styles.input, multiline && { minHeight: 96, textAlignVertical: "top" }, error ? { borderColor: palette.red } : null]} />{error ? <Text style={[styles.helper, { color: palette.red }]}>{error}</Text> : helper ? <Text style={styles.helper}>{helper}</Text> : null}</View>;
 }
 
 export function Choice({ label, selected, onPress, detail }: { label: string; selected: boolean; onPress: () => void; detail?: string }) {
@@ -157,7 +157,8 @@ const styles = StyleSheet.create({
   stepCtl: { flexDirection: "row", alignItems: "center", gap: 6 },
   stepBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: palette.brandSoft, alignItems: "center", justifyContent: "center" },
   stepValue: { minWidth: 86, textAlign: "center", color: palette.ink, fontSize: 16, fontWeight: "800", ...num },
-  stepInput: { borderBottomWidth: 2, borderBottomColor: palette.brand, paddingVertical: 2 },
+  // Largura fixa: sem ela, o campo de texto ocupa ~220px na web e espreme o rótulo (uma letra por linha).
+  stepInput: { width: 86, borderBottomWidth: 2, borderBottomColor: palette.brand, paddingVertical: 2 },
   tag: { alignSelf: "flex-start", borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5 },
   tagText: { fontSize: 11, fontWeight: "800", letterSpacing: 0.4 },
   sectionTitle: { color: palette.ink, fontSize: 18, fontWeight: "800", letterSpacing: -0.2 },

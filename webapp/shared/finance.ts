@@ -83,6 +83,8 @@ export type AppData = {
   privacyRequests: { type: "export" | "deletion"; createdAt: string; status: "solicitada" }[];
   /** Números que a pessoa ajustou no painel do plano. Sem isso, o plano usa os números de partida do ramo. */
   plano?: import("./plano").Alavancas;
+  /** Quando a pessoa trocou o contato pelo plano em PDF (ver shared/leads.ts). */
+  lead?: { enviadoEm: string };
 };
 
 export const DEFAULT_APP_DATA: AppData = {

@@ -1,8 +1,11 @@
 import { useEffect, useMemo } from "react";
 import { Platform, Pressable, ScrollView, Text, View } from "react-native";
-import { useRouter } from "expo-router";
 import { palette } from "@/components/lab-ui";
 import { useAppData } from "@/hooks/use-app-data";
+import { useVoltar } from "@/components/top-bar";
+import { LeadGate } from "@/components/lead-gate";
+import { computeIndice } from "@/shared/indice";
+import { registrarEvento } from "@/shared/leads";
 import { useMunicipalInsights } from "@/hooks/use-municipal-insights";
 import { activityIdOf, alavancasIniciais, brl, gerarPlano, num1, type Item } from "@/shared/plano";
 
@@ -12,11 +15,13 @@ import { activityIdOf, alavancasIniciais, brl, gerarPlano, num1, type Item } fro
  * No navegador, "Salvar PDF" abre a impressão; os botões somem no papel.
  */
 export default function PlanoPdfScreen() {
-  const router = useRouter();
+  const voltar = useVoltar();
   const { data, ready } = useAppData();
   const insights = useMunicipalInsights(data.idea.outsideState ? "" : data.idea.municipalityCode, activityIdOf(data) ?? "", data.idea.neighborhood ?? "");
   const ins = insights.status === "ready" ? insights.data : null;
   const plano = useMemo(() => ready ? gerarPlano(data, ins, alavancasIniciais(data)) : null, [ready, data, ins]);
+
+  useEffect(() => { void registrarEvento("pediu_pdf", { atividade: data.idea.activity, municipioCodigo: data.idea.municipalityCode }); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (Platform.OS !== "web" || typeof document === "undefined") return;
@@ -30,11 +35,12 @@ export default function PlanoPdfScreen() {
   const r = plano.resumo, a = plano.alavancas, un = plano.molde?.unidadePlural ?? "vendas";
   const hoje = new Date().toLocaleDateString("pt-BR", { day: "numeric", month: "long", year: "numeric" });
   const semImp = { dataSet: { semimpressao: "1" } } as any;
+  const indice = computeIndice(data, ins?.marketScore ?? null, plano).score;
 
-  return <ScrollView style={{ backgroundColor: palette.white }} contentContainerStyle={{ alignItems: "center", paddingVertical: 24 }}>
+  return <LeadGate indice={indice}><ScrollView style={{ backgroundColor: palette.white }} contentContainerStyle={{ alignItems: "center", paddingVertical: 24 }}>
     <View style={{ width: "100%", maxWidth: 760, paddingHorizontal: 24, gap: 18 }}>
       <View {...semImp} style={{ flexDirection: "row", justifyContent: "space-between" }}>
-        <Pressable accessibilityRole="button" onPress={() => router.back()} style={btn(false)}><Text style={{ color: palette.navy, fontWeight: "700" }}>← Voltar ao painel</Text></Pressable>
+        <Pressable accessibilityRole="button" onPress={voltar} style={btn(false)}><Text style={{ color: palette.navy, fontWeight: "700" }}>← Voltar ao painel</Text></Pressable>
         {Platform.OS === "web" ? <Pressable accessibilityRole="button" onPress={() => window.print()} style={btn(true)}><Text style={{ color: palette.navy, fontWeight: "800" }}>Salvar PDF</Text></Pressable> : null}
       </View>
 
@@ -89,7 +95,7 @@ export default function PlanoPdfScreen() {
 
       <Text style={{ fontSize: 10, color: palette.muted }}>Dados de mercado: Receita Federal (CNPJ) e IBGE. Números financeiros: simulação com valores de partida do ramo, ajustados pela pessoa. Documento informativo, não garante resultado.</Text>
     </View>
-  </ScrollView>;
+  </ScrollView></LeadGate>;
 }
 
 const btn = (primario: boolean) => ({ backgroundColor: primario ? palette.brand : palette.navySoft, borderRadius: 10, paddingHorizontal: 14, minHeight: 44, justifyContent: "center" as const });

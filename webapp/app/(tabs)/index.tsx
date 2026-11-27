@@ -12,6 +12,7 @@ import { MISSIONS } from "@/shared/finance";
 import { alavancasIniciais, gerarPlano, num1 } from "@/shared/plano";
 import { computeIndice } from "@/shared/indice";
 import { formatMoney } from "@/shared/format";
+import { registrarEvento } from "@/shared/leads";
 import { PLANNED_SIGNALS, SMALL_SAMPLE_THRESHOLD, type InsightSignal } from "@/shared/insights";
 
 function Welcome() {
@@ -67,6 +68,7 @@ export default function HomeScreen() {
   const { user } = useAuth();
   const activity = findActivity(data.idea.activity);
   const insights = useMunicipalInsights(data.idea.outsideState ? "" : data.idea.municipalityCode, activity?.id ?? "", data.idea.neighborhood ?? "");
+  useEffect(() => { if (data.idea.activity) void registrarEvento("resultado", { atividade: data.idea.activity, municipioCodigo: data.idea.municipalityCode }); }, [data.idea.activity, data.idea.municipalityCode]);
   if (!data.idea.activity) return <Welcome />;
 
   // Uma conta só: tudo nesta tela vem do mesmo motor do plano (com os ajustes que a pessoa fez no painel).
@@ -231,14 +233,14 @@ export default function HomeScreen() {
       </View>
     </Card>
 
-    {/* Conta */}
-    {!data.profile.verified ? <Pressable onPress={() => router.push("/cadastro")} style={{ backgroundColor: palette.brand, borderRadius: 26, padding: 20, flexDirection: "row", alignItems: "center", gap: 14 }}>
-      <View style={{ width: 46, height: 46, borderRadius: 16, backgroundColor: "rgba(255,255,255,0.2)", alignItems: "center", justifyContent: "center" }}><Ionicons name="bookmark-outline" size={22} color={palette.white} /></View>
-      <View style={{ flex: 1, gap: 2 }}><Text style={{ color: palette.white, fontWeight: "800", fontSize: 16 }}>Salve seu plano</Text><Text style={{ color: "#FFE3D6", fontSize: 13 }}>Crie sua conta grátis e veja seu plano em qualquer aparelho</Text></View>
+    {/* A troca do MVP: plano de negócio em PDF pelo contato (nome + WhatsApp). */}
+    {!data.profile.verified && !data.lead ? <Pressable accessibilityRole="button" onPress={() => router.push("/plano-pdf")} style={{ backgroundColor: palette.brand, borderRadius: 26, padding: 20, flexDirection: "row", alignItems: "center", gap: 14 }}>
+      <View style={{ width: 46, height: 46, borderRadius: 16, backgroundColor: "rgba(255,255,255,0.2)", alignItems: "center", justifyContent: "center" }}><Ionicons name="document-text-outline" size={22} color={palette.white} /></View>
+      <View style={{ flex: 1, gap: 2 }}><Text style={{ color: palette.white, fontWeight: "800", fontSize: 16 }}>Receba seu plano de negócio</Text><Text style={{ color: "#FFE3D6", fontSize: 13 }}>Plano completo em PDF: mercado, contas de 12 meses, riscos e os primeiros 90 dias</Text></View>
       <Ionicons name="arrow-forward" size={20} color={palette.white} />
     </Pressable> : null}
 
-    {/* Riscos abertos + plano completo grátis. Mentoria paga fica como convite, não como muro. */}
+    {/* Riscos abertos + plano completo. */}
     <View style={{ backgroundColor: palette.navy, borderRadius: 30, padding: 22, gap: 14 }}>
       <Text style={{ color: palette.lime, fontWeight: "800", fontSize: 12, letterSpacing: 1 }}>ANTES DE COLOCAR SEU DINHEIRO</Text>
       <Text style={{ color: palette.white, fontSize: 24, lineHeight: 30, fontWeight: "800" }}>{name ? `${name}, veja` : "Veja"} o que pode dar errado e o que fazer.</Text>
@@ -251,9 +253,8 @@ export default function HomeScreen() {
           </View>
         </View>)}
       <Pressable accessibilityRole="button" onPress={() => router.push("/plano")} style={({ pressed }) => ({ backgroundColor: palette.brand, borderRadius: 999, minHeight: 60, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8, transform: [{ scale: pressed ? 0.98 : 1 }] })}>
-        <Ionicons name="document-text" size={20} color={palette.navy} /><Text style={{ color: palette.navy, fontWeight: "800", fontSize: 17 }}>Ver meu plano completo, grátis</Text>
+        <Ionicons name="document-text" size={20} color={palette.navy} /><Text style={{ color: palette.navy, fontWeight: "800", fontSize: 17 }}>Ver meu plano completo</Text>
       </Pressable>
-      <Text accessibilityRole="link" onPress={() => router.push("/report")} style={{ color: "#AEB9CF", fontSize: 14, textAlign: "center", textDecorationLine: "underline" }}>Quero alguém do meu lado para abrir</Text>
     </View>
 
     <View style={{ height: 24 }} />

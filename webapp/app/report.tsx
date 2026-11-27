@@ -4,8 +4,10 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Body, Heading, Page, palette, numStyle } from "@/components/lab-ui";
 import { useAppData } from "@/hooks/use-app-data";
+import { TopBar } from "@/components/top-bar";
 import { alavancasIniciais, gerarPlano } from "@/shared/plano";
 import { formatMoney } from "@/shared/format";
+import { registrarInteresse } from "@/shared/supabase";
 
 const PARCELA = 199;
 const PARCELAS = 10;
@@ -35,14 +37,19 @@ export default function ReportScreen() {
   const emJogo = gerarPlano(data, null, alavancasIniciais(data)).resumo.paraComecar;   // mesma conta do plano
   const pct = emJogo > 0 ? Math.max(1, Math.round((TOTAL / emJogo) * 100)) : null;
 
-  const comprar = () => {
+  const [enviando, setEnviando] = useState(false);
+  const comprar = async () => {
     if (!data.profile.verified) { router.push("/cadastro"); return; }
-    const msg = "Recebemos seu interesse! Vamos te chamar no WhatsApp para fechar o pagamento e marcar a 1ª mentoria.";
-    if (Platform.OS === "web" && typeof window !== "undefined") window.alert(msg); else Alert.alert("Quase lá", msg);
+    if (enviando) return;
+    setEnviando(true);
+    const erro = await registrarInteresse({ produto: "plano-mentoria-1990", atividade: data.idea.activity, municipio: cidade, municipio_codigo: data.idea.municipalityCode, valor_em_jogo: emJogo });
+    setEnviando(false);
+    const msg = erro ?? "Recebemos seu pedido! Vamos te chamar no WhatsApp para fechar o pagamento e marcar a 1ª mentoria.";
+    if (Platform.OS === "web" && typeof window !== "undefined") window.alert(msg); else Alert.alert(erro ? "Não deu certo" : "Quase lá", msg);
   };
 
   return <View style={{ flex: 1, backgroundColor: palette.paper }}>
-    <ScrollView contentContainerStyle={{ paddingBottom: 110 }}><Page>
+    <ScrollView contentContainerStyle={{ paddingBottom: 110 }}><Page><TopBar />
 
       {/* Promessa */}
       <View style={{ backgroundColor: palette.navy, borderRadius: 30, padding: 24, gap: 14, overflow: "hidden" }}>
@@ -120,8 +127,8 @@ export default function ReportScreen() {
     <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, backgroundColor: palette.white, borderTopWidth: 1, borderTopColor: palette.line, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 16 }}>
       <View style={{ width: "100%", maxWidth: 560, alignSelf: "center", flexDirection: "row", alignItems: "center", gap: 14 }}>
         <View><Text style={{ color: palette.muted, fontSize: 12 }}>{PARCELAS}× sem juros</Text><Text style={{ color: palette.ink, fontWeight: "800", fontSize: 20, ...numStyle }}>{formatMoney(PARCELA)}</Text></View>
-        <Pressable accessibilityRole="button" onPress={comprar} style={({ pressed }) => ({ flex: 1, backgroundColor: palette.brand, borderRadius: 999, minHeight: 54, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8, transform: [{ scale: pressed ? 0.98 : 1 }] })}>
-          <Text style={{ color: palette.white, fontWeight: "800", fontSize: 16 }}>Quero meu plano</Text><Ionicons name="arrow-forward" size={18} color={palette.white} />
+        <Pressable accessibilityRole="button" onPress={() => void comprar()} disabled={enviando} style={({ pressed }) => ({ flex: 1, opacity: enviando ? 0.6 : 1, backgroundColor: palette.brand, borderRadius: 999, minHeight: 54, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8, transform: [{ scale: pressed ? 0.98 : 1 }] })}>
+          <Text style={{ color: palette.white, fontWeight: "800", fontSize: 16 }}>{enviando ? "Enviando…" : "Quero meu plano"}</Text><Ionicons name="arrow-forward" size={18} color={palette.white} />
         </Pressable>
       </View>
     </View>

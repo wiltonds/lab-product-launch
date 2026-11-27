@@ -8,6 +8,8 @@ import { BUSINESS_CATEGORIES } from "@/shared/catalog";
 import { moldeDe } from "@/shared/moldes";
 import { formatMoney } from "@/shared/format";
 import { validateName } from "@/shared/validation";
+import { LogoInicio, useVoltar } from "@/components/top-bar";
+import { registrarEvento } from "@/shared/leads";
 import { citiesOf, norm, searchCities, stateName, STATES, type City } from "@/shared/cities";
 import { fetchNeighborhoods } from "@/shared/insights";
 const ACTIVITIES = BUSINESS_CATEGORIES.flatMap((c) => c.activities.map((a) => ({ ...a, category: c.id })));
@@ -44,6 +46,8 @@ const AUTO = new Set([1, 2, 4, 6, 8]); // passos que avançam ao tocar
 
 export default function OnboardingScreen() {
   const router = useRouter();
+  const voltar = useVoltar();
+  useEffect(() => { void registrarEvento("comecou"); }, []);
   const { data, update } = useAppData();
   const [step, setStep] = useState(0);
   const [name, setName] = useState(data.profile.name);
@@ -112,8 +116,9 @@ export default function OnboardingScreen() {
 
   return <View style={{ flex: 1, backgroundColor: palette.paper }}>
     <View style={{ paddingHorizontal: 20, paddingTop: 14, gap: 10, width: "100%", maxWidth: 560, alignSelf: "center" }}>
+      <View style={{ alignItems: "center" }}><LogoInicio size={16} /></View>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
-        <Pressable accessibilityLabel="Voltar" onPress={() => (step === 0 ? router.back() : go(step - 1))} hitSlop={10} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: palette.white, alignItems: "center", justifyContent: "center" }}>
+        <Pressable accessibilityLabel="Voltar" onPress={() => (step === 0 ? voltar() : go(step - 1))} hitSlop={10} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: palette.white, alignItems: "center", justifyContent: "center" }}>
           <Ionicons name="arrow-back" size={20} color={palette.ink} />
         </Pressable>
         <View style={{ flex: 1, gap: 6 }}>

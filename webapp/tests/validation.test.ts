@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { maskWhatsapp, suggestEmail, validateCode, validateEmail, validateName, validateWhatsapp } from "../shared/validation";
+import { maskWhatsapp, suggestEmail, validarTesteVendas, validateCode, validateEmail, validateName, validateWhatsapp } from "../shared/validation";
 
 describe("WhatsApp", () => {
   it("aceita celular válido, com ou sem máscara e +55", () => {
@@ -40,5 +40,30 @@ describe("Nome e código", () => {
     expect(validateCode("12345")).not.toBeNull();
     expect(validateCode("12345678")).toBeNull();
     expect(validateCode("123456789")).not.toBeNull();
+  });
+});
+
+describe("teste com clientes", () => {
+  const base = { days: "3", approached: "20", interested: "8", intent: "5", bought: "3", price: "18" };
+  it("aceita um funil coerente", () => {
+    const r = validarTesteVendas(base);
+    expect(r.erros).toEqual({});
+    expect(r.valores).toEqual({ days: 3, approached: 20, interested: 8, intendToBuy: 5, bought: 3, price: 18 });
+  });
+  it("lê preço no jeito brasileiro e com ponto decimal", () => {
+    expect(validarTesteVendas({ ...base, price: "18,50" }).valores?.price).toBe(18.5);
+    expect(validarTesteVendas({ ...base, price: "18.5" }).valores?.price).toBe(18.5);
+    expect(validarTesteVendas({ ...base, price: "1.250" }).valores?.price).toBe(1250);
+  });
+  it("recusa etapas maiores que a anterior", () => {
+    expect(validarTesteVendas({ ...base, approached: "10", interested: "15" }).erros.interested).toBeTruthy();
+    expect(validarTesteVendas({ ...base, approached: "10", bought: "20" }).erros.bought).toBeTruthy();
+    expect(validarTesteVendas({ ...base, intent: "9" }).erros.intent).toBeTruthy();
+  });
+  it("recusa campos vazios e preço inválido", () => {
+    const r = validarTesteVendas({ days: "", approached: "", interested: "", intent: "", bought: "", price: "" });
+    expect(Object.keys(r.erros).sort()).toEqual(["approached", "bought", "days", "intent", "interested", "price"]);
+    expect(r.valores).toBeNull();
+    expect(validarTesteVendas({ ...base, price: "abc" }).erros.price).toBeTruthy();
   });
 });
