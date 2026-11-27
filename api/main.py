@@ -45,6 +45,15 @@ TABELAS = ("municipios", "ativos", "movimento", "sobrevivencia", "sobrevivencia_
 from lab.compacto import COLUNAS, GRANDES  # noqa: E402
 
 app = FastAPI(title="Vinga — API de dados", version=VERSAO)
+
+
+@app.on_event("startup")
+def _aquecer() -> None:
+    """Carrega os agregados ao subir, numa thread só: a primeira pessoa não espera a leitura."""
+    try:
+        dados()
+    except HTTPException:
+        pass
 app.add_middleware(CORSMiddleware, allow_origins=[o.strip() for o in os.environ.get("CORS_ORIGINS", "*").split(",") if o.strip()],
                    allow_methods=["GET"], allow_headers=["*"])
 
@@ -70,6 +79,11 @@ def dados() -> dict:
     d["meta"] = m
     d = preparar(d)
     gc.collect()
+    try:   # o Arrow também guarda memória própria da leitura: devolve
+        import pyarrow as pa
+        pa.default_memory_pool().release_unused()
+    except Exception:  # noqa: BLE001
+        pass
     try:   # devolve ao sistema a memória que sobrou da leitura
         import ctypes
         ctypes.CDLL("libc.so.6").malloc_trim(0)
