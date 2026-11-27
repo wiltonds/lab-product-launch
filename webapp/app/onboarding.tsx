@@ -53,6 +53,9 @@ export default function OnboardingScreen() {
   const [hoods, setHoods] = useState<{ name: string; companies: number }[]>([]);
   const [building, setBuilding] = useState(false);
   const [error, setError] = useState("");
+  // Só marca a opção que a pessoa escolheu agora: nada vem pré-marcado (o padrão do app não é resposta dela).
+  const [respondeu, setRespondeu] = useState<Set<string>>(new Set());
+  const marcar = (k: string) => setRespondeu((r) => new Set(r).add(k));
 
   const first = (data.profile.name || name).trim().split(" ")[0];
   const cities = useMemo(() => (ufPick || query.trim() ? searchCities(query, { uf: ufPick || undefined, limit: ufPick ? 12 : 8 }) : []), [query, ufPick]);
@@ -86,6 +89,7 @@ export default function OnboardingScreen() {
     setHoodCity(null); setQuery(""); advance();
   };
   const finish = () => {
+    if (!respondeu.has("reserve") || !respondeu.has("living")) { setError("Escolha a sua reserva e quanto a casa gasta por mês: eles mostram quanto tempo você aguenta."); return; }
     if (!data.profile.termsAccepted) { setError("Para ver o resultado, aceite os termos de uso."); return; }
     setBuilding(true);
   };
@@ -153,7 +157,7 @@ export default function OnboardingScreen() {
               // Números de partida do ramo (molde), não os mesmos para todo negócio.
               const m = moldeDe(a.id);
               const finance = m ? { ...data.finance, averageTicket: m.ticket, customersPerDay: m.vendasDia, operatingDays: m.diasMes, variableCostPercent: m.custoVariavel, initialInvestment: m.investimento.ponto || m.investimento.casa } : data.finance;
-              void update({ idea: { ...data.idea, category: a.category, activity: a.label }, finance }); advance();
+              void update({ idea: { ...data.idea, category: a.category, activity: a.label }, finance, plano: undefined }); advance();
             }} />)}
         </View>
         <Text style={{ color: palette.faint, fontSize: 13, textAlign: "center" }}>Mais tipos de negócio em breve.</Text>
@@ -213,8 +217,8 @@ export default function OnboardingScreen() {
       {step === 6 ? <>
         <Heading>Quanto você tem para investir?</Heading>
         <Body>Só o dinheiro que pode ir para o negócio. A reserva da família vem depois.</Body>
-        <View style={{ gap: 10 }}>{INVEST.map((o) => <Choice key={o.label} label={o.label} selected={data.profile.investable === o.value}
-          onPress={() => { setProfile({ investable: o.value }); advance(); }} />)}</View>
+        <View style={{ gap: 10 }}>{INVEST.map((o) => <Choice key={o.label} label={o.label} selected={respondeu.has("invest") && data.profile.investable === o.value}
+          onPress={() => { marcar("invest"); setProfile({ investable: o.value }); advance(); }} />)}</View>
       </> : null}
 
       {step === 7 ? <>
@@ -234,12 +238,13 @@ export default function OnboardingScreen() {
       {step === 8 ? <>
         <Heading>E o aluguel do ponto?</Heading>
         <Body>Se ainda não sabe, escolha o mais próximo. Dá para mudar depois.</Body>
-        <View style={{ gap: 10 }}>{RENT.map((o) => <Choice key={o.label} label={o.label} selected={data.finance.rent === o.value}
+        <View style={{ gap: 10 }}>{RENT.filter((o) => o.value > 0 || (moldeDe(ACTIVITIES.find((x) => x.label === data.idea.activity)?.id)?.podeEmCasa ?? true)).map((o) => <Choice key={o.label} label={o.label} selected={respondeu.has("rent") && data.finance.rent === o.value}
           onPress={() => {
+            marcar("rent");
             const m = moldeDe(ACTIVITIES.find((x) => x.label === data.idea.activity)?.id);
             const emCasa = o.value === 0 && (m?.podeEmCasa ?? true);
             const inv = m ? (emCasa ? m.investimento.casa : m.investimento.ponto) : data.finance.initialInvestment;
-            void update({ finance: { ...data.finance, rent: o.value, initialInvestment: inv } }); advance();
+            void update({ finance: { ...data.finance, rent: o.value, initialInvestment: inv }, plano: undefined }); advance();
           }} />)}</View>
       </> : null}
 
@@ -247,11 +252,11 @@ export default function OnboardingScreen() {
         <Heading>Última: sua segurança</Heading>
         <Body>Negócio novo demora a pagar o dono. Isso mostra quanto tempo você aguenta.</Body>
         {label("Hoje você…")}
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>{STATUS.map((s) => <Chip key={s} label={s} selected={data.profile.status === s} onPress={() => setProfile({ status: s })} />)}</View>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>{STATUS.map((s) => <Chip key={s} label={s} selected={respondeu.has("status") && data.profile.status === s} onPress={() => { marcar("status"); setProfile({ status: s }); }} />)}</View>
         {label("Reserva guardada para emergências")}
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>{RESERVE.map((o) => <Chip key={o.label} label={o.label} selected={data.profile.reserve === o.value} onPress={() => setProfile({ reserve: o.value })} />)}</View>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>{RESERVE.map((o) => <Chip key={o.label} label={o.label} selected={respondeu.has("reserve") && data.profile.reserve === o.value} onPress={() => { marcar("reserve"); setProfile({ reserve: o.value }); }} />)}</View>
         {label("Quanto sua casa gasta por mês")}
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>{LIVING.map((o) => <Chip key={o.label} label={o.label} selected={data.profile.personalMonthly === o.value} onPress={() => setProfile({ personalMonthly: o.value })} />)}</View>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>{LIVING.map((o) => <Chip key={o.label} label={o.label} selected={respondeu.has("living") && data.profile.personalMonthly === o.value} onPress={() => { marcar("living"); setProfile({ personalMonthly: o.value }); }} />)}</View>
         <Pressable onPress={() => setProfile({ termsAccepted: !data.profile.termsAccepted })} style={{ flexDirection: "row", gap: 12, alignItems: "center", marginTop: 6 }}>
           <View style={{ width: 24, height: 24, borderRadius: 7, borderWidth: 2, borderColor: data.profile.termsAccepted ? palette.brand : "#C5CAD6", backgroundColor: data.profile.termsAccepted ? palette.brand : palette.white, alignItems: "center", justifyContent: "center" }}>
             {data.profile.termsAccepted ? <Ionicons name="checkmark" size={15} color={palette.white} /> : null}

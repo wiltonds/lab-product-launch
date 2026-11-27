@@ -7,7 +7,7 @@ function rita(): AppData {
   const d = structuredClone(DEFAULT_APP_DATA);
   d.profile = { ...d.profile, name: "Rita", investable: 10000, reserve: 0, personalMonthly: 1500, experience: "Sim, um pouco" };
   d.idea = { ...d.idea, activity: "Manicure e estética", municipality: "Campina Grande", municipalityCode: "2504009", municipalityUf: "PB", neighborhood: "Catole" };
-  d.finance = { ...d.finance, rent: 0 };
+  d.finance = { ...d.finance, rent: 0, operatingDays: 22 };   // como o cadastro deixa depois de escolher o ramo
   return d;
 }
 
@@ -16,6 +16,7 @@ const insights: MunicipalInsights = {
   signals: [
     { id: "concorrencia", title: "Concorrência", verdict: "atencao", headline: "1 para cada 760 moradores", confidence: "OBSERVADO", source: "Receita Federal" },
     { id: "sobrevivencia", title: "Sobrevivência", verdict: "favoravel", headline: "76% seguem abertos após 2 anos", confidence: "ESTIMADO", source: "Receita Federal" },
+    { id: "bairro", title: "No bairro Catolé", verdict: "atencao", headline: "9 negócios entre 600 empresas", confidence: "OBSERVADO", source: "Receita Federal", nearby: ["Bodocongó", "Liberdade"] },
   ],
   opportunities: { cities: [{ code: "1", name: "Queimadas", uf: "PB", active: 18, expected: 20 }], activities: [] },
   limitations: [],
@@ -45,7 +46,10 @@ describe("plano de negócio", () => {
     expect(p.cenarios[0].resultadoMes).toBeLessThan(p.cenarios[1].resultadoMes);
     expect(p.cenarios[1].resultadoMes).toBeLessThan(p.cenarios[2].resultadoMes);
     expect(p.swot.ameacas.some((x) => x.texto.includes("Concorrência"))).toBe(true);
-    expect(p.swot.oportunidades.some((x) => x.texto.includes("Queimadas"))).toBe(true);
+    // Em casa: o Plano B aponta bairros da própria cidade, não outra cidade.
+    expect(p.swot.oportunidades.some((x) => x.texto.includes("Bodocongó"))).toBe(true);
+    expect(p.swot.oportunidades.some((x) => x.texto.includes("Queimadas"))).toBe(false);
+    expect(p.planoB.some((x) => x.texto.includes("Bodocongó"))).toBe(true);
     expect(p.swot.fraquezas.some((x) => x.texto.includes("reserva"))).toBe(true);
   });
 
@@ -55,5 +59,12 @@ describe("plano de negócio", () => {
     expect(p.resumo.fecha).toBe(false);
     expect(p.riscos.length).toBeGreaterThan(0);
     expect(p.resumo.retornoEmMeses).toBeNull();
+  });
+
+  it("ajustes do painel valem para o app todo", () => {
+    const d = rita();
+    d.plano = { ...alavancasIniciais(d), preco: 50 };
+    expect(alavancasIniciais(d).preco).toBe(50);
+    expect(gerarPlano(d, null).alavancas.preco).toBe(50);
   });
 });

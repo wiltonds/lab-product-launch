@@ -128,5 +128,15 @@ def test_bairros(cliente):
     r = cliente.get("/v1/insights", params={"municipio": "3500003", "atividade": "lanchonete", "bairro": "centro"}).json()
     s = r["signals"][0]
     assert s["id"] == "bairro" and "empresas do bairro" in s["headline"]
+    assert isinstance(s.get("nearby", []), list)   # bairros com menos concorrência, para o Plano B de quem atende em casa
     r = cliente.get("/v1/insights", params={"municipio": "3500003", "atividade": "lanchonete", "bairro": "nao existe"}).json()
     assert all(x["id"] != "bairro" for x in r["signals"])
+
+
+def test_acentuar_bairros():
+    import api.main as main
+    d = {"acentos": main.mapa_de_acentos(["São José da Tapera", "Canaã dos Carajás", "Palmeira dos Índios"])}
+    assert main.acentuar(d, "Sao Jose") == "São José"
+    assert main.acentuar(d, "Canaa") == "Canaã"
+    assert main.acentuar(d, "Brasilia") == "Brasília"
+    assert main.acentuar(d, "Primavera") == "Primavera"

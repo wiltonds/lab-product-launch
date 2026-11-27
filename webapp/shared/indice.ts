@@ -9,6 +9,7 @@
  * Quem escolheu "Perdi o emprego" (recomeço) tem mais peso no bolso: errar custa mais caro.
  */
 import { calculateScenario, type AppData } from "./finance";
+import type { Plano } from "./plano";
 
 export type PartId = "mercado" | "sobrevivencia" | "bolso" | "preparo";
 export type Indice = {
@@ -34,15 +35,17 @@ export function label(score: number): string {
   return "Ainda não: mude o plano antes";
 }
 
-export function bolso(data: AppData) {
+/** Com o plano em mãos, usa a mesma conta do plano (uma conta só no app); sem ele, a conta antiga do simulador. */
+export function bolso(data: AppData, plano?: Plano | null) {
   const f = data.finance;
-  const r = calculateScenario(f, "intermediario");
-  const need = r.breakEvenCustomersPerDay;
-  const folga = need === null || f.customersPerDay <= 0 ? 0 : 1 - need / f.customersPerDay;   // fração de vendas que pode cair
+  const r = plano ? null : calculateScenario(f, "intermediario");
+  const need = plano ? (Number.isFinite(plano.resumo.vendasDiaParaRetirada) ? plano.resumo.vendasDiaParaRetirada : null) : r!.breakEvenCustomersPerDay;
+  const vendas = plano ? plano.alavancas.vendasDia : f.customersPerDay;
+  const folga = need === null || vendas <= 0 ? 0 : 1 - need / vendas;   // fração de vendas que pode cair
   const meses = data.profile.personalMonthly > 0 ? data.profile.reserve / data.profile.personalMonthly : 0;
-  const capital = data.profile.investable / Math.max(1, f.initialInvestment + r.workingCapital);
+  const capital = data.profile.investable / Math.max(1, plano ? plano.resumo.paraComecar : f.initialInvestment + r!.workingCapital);
   const notas = { folga: clip((folga / 0.5) * 100), reserva: clip((meses / 6) * 100), capital: clip(capital * 100) };
-  return { score: clip(0.5 * notas.folga + 0.3 * notas.reserva + 0.2 * notas.capital), notas, need, meses };
+  return { score: clip(0.5 * notas.folga + 0.3 * notas.reserva + 0.2 * notas.capital), notas, need, meses, unidade: plano?.molde?.unidadePlural ?? "clientes" };
 }
 
 export function preparo(data: AppData): number | null {
@@ -52,8 +55,8 @@ export function preparo(data: AppData): number | null {
   return clip(0.6 * (e ?? 50) + 0.4 * (s ?? 50));
 }
 
-export function computeIndice(data: AppData, market?: { market: number | null; survival: number | null } | null): Indice {
-  const b = bolso(data);
+export function computeIndice(data: AppData, market?: { market: number | null; survival: number | null } | null, plano?: Plano | null): Indice {
+  const b = bolso(data, plano);
   const valores: Record<PartId, number | null> = {
     mercado: market?.market ?? null,
     sobrevivencia: market?.survival ?? null,
@@ -98,7 +101,7 @@ function explicar(parte: PartId, b: ReturnType<typeof bolso>, data: AppData): { 
   };
   const { folga, reserva } = b.notas;
   if (folga <= reserva && folga <= b.notas.capital) return {
-    reason: b.need === null ? "Com esse preço, cada venda não cobre o próprio custo." : `As contas ficam apertadas: você precisa de ${Math.ceil(b.need)} clientes por dia só para empatar.`,
+    reason: b.need === null ? "Com esse preço, cada venda não cobre o próprio custo." : `As contas ficam apertadas: você precisa de ${String(Math.round(b.need * 10) / 10).replace(".", ",")} ${b.unidade} por dia para pagar tudo e a sua retirada.`,
     action: "Teste o preço: pergunte a 10 pessoas quanto pagariam e quantas vezes por mês viriam.",
   };
   if (reserva <= b.notas.capital) return {

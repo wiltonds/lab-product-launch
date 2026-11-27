@@ -4,7 +4,7 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Body, Heading, Page, palette, numStyle } from "@/components/lab-ui";
 import { useAppData } from "@/hooks/use-app-data";
-import { calculateScenario } from "@/shared/finance";
+import { alavancasIniciais, gerarPlano } from "@/shared/plano";
 import { formatMoney } from "@/shared/format";
 
 const PARCELA = 199;
@@ -32,8 +32,7 @@ export default function ReportScreen() {
   const nome = data.profile.name.trim().split(" ")[0];
   const negocio = data.idea.activity ? data.idea.activity.toLowerCase() : "o seu negócio";
   const cidade = data.idea.outsideState || data.idea.municipality;
-  const r = calculateScenario(data.finance, "intermediario");
-  const emJogo = data.finance.initialInvestment + r.workingCapital;
+  const emJogo = gerarPlano(data, null, alavancasIniciais(data)).resumo.paraComecar;   // mesma conta do plano
   const pct = emJogo > 0 ? Math.max(1, Math.round((TOTAL / emJogo) * 100)) : null;
 
   const comprar = () => {
