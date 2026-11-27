@@ -15,6 +15,7 @@ create table if not exists public.interesses (
 );
 
 alter table public.interesses enable row level security;
+grant insert, select on table public.interesses to authenticated;
 
 drop policy if exists "interesse: criar o proprio" on public.interesses;
 drop policy if exists "interesse: ler o proprio" on public.interesses;

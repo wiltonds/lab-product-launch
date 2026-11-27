@@ -46,6 +46,9 @@ alter table public.eventos enable row level security;
 drop policy if exists "evento: qualquer um cria" on public.eventos;
 create policy "evento: qualquer um cria" on public.eventos for insert to anon, authenticated with check (true);
 
+-- Projetos novos do Supabase não dão permissão automática: visitantes só INSEREM (não leem nada).
+grant insert on public.leads, public.eventos to anon, authenticated;
+
 -- Funil por origem (rode no SQL Editor quando quiser ver os números).
 create or replace view public.funil as
 select coalesce(origem, '(direto)') as origem,
