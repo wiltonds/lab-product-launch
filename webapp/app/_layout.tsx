@@ -89,6 +89,8 @@ export default function RootLayout() {
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="oauth/callback" />
             <Stack.Screen name="cadastro" />
+            <Stack.Screen name="plano" />
+            <Stack.Screen name="plano-pdf" />
           </Stack>
           <StatusBar style="auto" />
         </QueryClientProvider>

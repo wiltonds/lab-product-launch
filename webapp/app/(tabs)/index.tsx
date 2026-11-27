@@ -131,6 +131,9 @@ export default function HomeScreen() {
       <Pressable onPress={() => router.push("/(tabs)/simulator")} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: "rgba(255,255,255,0.1)", borderRadius: 16, paddingHorizontal: 16, paddingVertical: 13 }}>
         <Text style={{ color: palette.white, fontWeight: "700" }}>Mexer nos números</Text><Ionicons name="options-outline" size={18} color={palette.white} />
       </Pressable>
+      <Pressable onPress={() => router.push("/plano")} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: palette.lime, borderRadius: 16, paddingHorizontal: 16, paddingVertical: 13 }}>
+        <Text style={{ color: palette.brandDeep, fontWeight: "800" }}>Ver meu plano de negócio</Text><Ionicons name="document-text-outline" size={18} color={palette.brandDeep} />
+      </Pressable>
     </View>
 
     {/* Ponto de equilíbrio */}
