@@ -4,6 +4,7 @@ import { palette } from "@/components/lab-ui";
 import { useAppData } from "@/hooks/use-app-data";
 import { useVoltar } from "@/components/top-bar";
 import { LeadGate } from "@/components/lead-gate";
+import { WhatsAppVinga } from "@/components/whatsapp-vinga";
 import { computeIndice } from "@/shared/indice";
 import { registrarEvento } from "@/shared/leads";
 import { useMunicipalInsights } from "@/hooks/use-municipal-insights";
@@ -43,6 +44,7 @@ export default function PlanoPdfScreen() {
         <Pressable accessibilityRole="button" onPress={voltar} style={btn(false)}><Text style={{ color: palette.navy, fontWeight: "700" }}>← Voltar ao painel</Text></Pressable>
         {Platform.OS === "web" ? <Pressable accessibilityRole="button" onPress={() => window.print()} style={btn(true)}><Text style={{ color: palette.navy, fontWeight: "800" }}>Salvar PDF</Text></Pressable> : null}
       </View>
+      <View {...semImp}><WhatsAppVinga /></View>
 
       <View style={{ backgroundColor: palette.navy, borderRadius: 12, padding: 20, gap: 4 }}>
         <Text style={{ color: palette.lime, fontSize: 11, fontWeight: "800", letterSpacing: 1.4 }}>PLANO DE NEGÓCIO · {hoje.toUpperCase()}</Text>

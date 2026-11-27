@@ -34,7 +34,7 @@ create policy "lead: qualquer um cria" on public.leads for insert to anon, authe
 create table if not exists public.eventos (
   id bigint generated always as identity primary key,
   sessao text not null check (char_length(sessao) <= 40),
-  evento text not null check (evento in ('abriu', 'comecou', 'resultado', 'abriu_plano', 'pediu_pdf', 'lead', 'teste_clientes')),
+  evento text not null check (evento in ('abriu', 'comecou', 'resultado', 'abriu_plano', 'pediu_pdf', 'lead', 'teste_clientes', 'chamou_whatsapp')),
   origem text check (char_length(origem) <= 60),
   atividade text check (char_length(atividade) <= 60),
   municipio_codigo text check (char_length(municipio_codigo) <= 7),
@@ -59,3 +59,8 @@ select coalesce(origem, '(direto)') as origem,
        count(distinct sessao) filter (where evento = 'lead')      as viraram_lead
 from public.eventos group by 1 order by abriram desc;
 revoke all on public.funil from anon, authenticated;
+
+-- Novo evento (rode se a tabela já existia): clique em "Receber meu plano no WhatsApp".
+alter table public.eventos drop constraint if exists eventos_evento_check;
+alter table public.eventos add constraint eventos_evento_check
+  check (evento in ('abriu', 'comecou', 'resultado', 'abriu_plano', 'pediu_pdf', 'lead', 'teste_clientes', 'chamou_whatsapp'));

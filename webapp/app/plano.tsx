@@ -7,6 +7,7 @@ import { useAppData } from "@/hooks/use-app-data";
 import { useMunicipalInsights } from "@/hooks/use-municipal-insights";
 import { TopBar } from "@/components/top-bar";
 import { LeadGate } from "@/components/lead-gate";
+import { WhatsAppVinga } from "@/components/whatsapp-vinga";
 import { computeIndice } from "@/shared/indice";
 import { registrarEvento } from "@/shared/leads";
 import { activityIdOf, alavancasIniciais, brl, gerarPlano, num1, type Alavancas, type Item } from "@/shared/plano";
@@ -43,6 +44,7 @@ export default function PlanoScreen() {
     </View>
 
     <Page style={{ gap: 14, paddingTop: 16 }}>
+      <WhatsAppVinga />
       <Card style={{ gap: 12 }}>
         <Eyebrow color={palette.amber}>RESUMO</Eyebrow>
         <View style={{ flexDirection: "row", gap: 10 }}>

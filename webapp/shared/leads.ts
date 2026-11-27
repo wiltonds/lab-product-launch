@@ -13,7 +13,7 @@ import { onlyDigits } from "./validation";
 const CHAVE_ORIGEM = "vinga:origem";
 const CHAVE_SESSAO = "vinga:sessao";
 
-export type Evento = "abriu" | "comecou" | "resultado" | "abriu_plano" | "pediu_pdf" | "lead" | "teste_clientes";
+export type Evento = "abriu" | "comecou" | "resultado" | "abriu_plano" | "pediu_pdf" | "lead" | "teste_clientes" | "chamou_whatsapp";
 
 /** Limpa a origem vinda da URL: só letras, números e hífen, até 60 caracteres. */
 export function limparOrigem(bruta: string | null | undefined): string | null {
