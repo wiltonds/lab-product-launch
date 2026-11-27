@@ -17,14 +17,13 @@ import { PLANNED_SIGNALS, SMALL_SAMPLE_THRESHOLD, type InsightSignal } from "@/s
 
 function Welcome() {
   const router = useRouter();
+  // Só o "Olá." sobe, e rápido. Texto e botão aparecem na hora: antes ficavam invisíveis por segundos
+  // (e reiniciavam a animação a cada recarga), e em celular lento parecia que a tela não abria.
   const sobe = useRef(new Animated.Value(0)).current;
-  const resto = useRef(new Animated.Value(0)).current;
+  const resto = useRef(new Animated.Value(1)).current;
   useEffect(() => {
-    Animated.sequence([
-      Animated.timing(sobe, { toValue: 1, duration: 900, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-      Animated.timing(resto, { toValue: 1, duration: 600, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-    ]).start();
-  }, [sobe, resto]);
+    Animated.timing(sobe, { toValue: 1, duration: 450, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
+  }, [sobe]);
   const fade = (v: Animated.Value, dy: number) => ({ opacity: v, transform: [{ translateY: v.interpolate({ inputRange: [0, 1], outputRange: [dy, 0] }) }] });
   return <View style={{ flex: 1, backgroundColor: palette.white }}>
     <Page style={{ flex: 1, paddingTop: 28, paddingBottom: 36 }}>

@@ -1,5 +1,6 @@
 import * as Api from "@/lib/_core/api";
 import * as Auth from "@/lib/_core/auth";
+import { getApiBaseUrl } from "@/constants/oauth";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Platform } from "react-native";
 
@@ -21,6 +22,9 @@ export function useAuth(options?: UseAuthOptions) {
 
       // Web platform: use cookie-based auth, fetch user from API
       if (Platform.OS === "web") {
+        // Site estático (Render): não existe servidor de login do Manus. Sem isso, cada tela pedia /api/auth/me e recebia 404.
+        const local = typeof window !== "undefined" && /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname);
+        if (!getApiBaseUrl() && !local) { setUser(null); return; }
         console.log("[useAuth] Web platform: fetching user from API...");
         const apiUser = await Api.getMe();
 
