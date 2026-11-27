@@ -171,7 +171,7 @@ export default function HomeScreen() {
       <Card style={{ flex: 1, padding: 16, gap: 8 }}>
         <IconBadge icon="shield-checkmark-outline" bg={months !== null && months >= 6 ? palette.greenSoft : palette.amberSoft} color={months !== null && months >= 6 ? palette.green : palette.amber} size={36} />
         <Text style={{ color: palette.muted, fontSize: 13 }}>Sua reserva sustenta a casa por</Text>
-        <Text style={{ color: palette.ink, fontSize: 20, fontWeight: "800", ...numStyle }}>{months === null ? "—" : `${atLeast}${months < 1 ? "menos de 1" : Math.floor(months)} ${Math.floor(months) === 1 ? "mês" : "meses"}`}</Text>
+        <Text style={{ color: palette.ink, fontSize: 20, fontWeight: "800", ...numStyle }}>{months === null ? "—" : `${atLeast}${months < 1 ? "menos de 1 mês" : `${Math.floor(months)} ${Math.floor(months) === 1 ? "mês" : "meses"}`}`}</Text>
         <Text style={{ color: palette.muted, fontSize: 13 }}>Ideal: 6 meses ou mais</Text>
       </Card>
     </View>

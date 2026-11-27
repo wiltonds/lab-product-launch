@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View, type TextInputProps } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -22,7 +22,7 @@ function Input({ label, error, icon, ...props }: TextInputProps & { label: strin
 export default function CadastroScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ modo?: string }>();
-  const { data, update } = useAppData();
+  const { data, update, ready } = useAppData();
   const [mode, setMode] = useState<"criar" | "entrar">(params.modo === "entrar" ? "entrar" : "criar");
   const [stage, setStage] = useState<"dados" | "codigo" | "pronto">("dados");
   const [name, setName] = useState(data.profile.name);
@@ -38,6 +38,23 @@ export default function CadastroScreen() {
     return searchCities(name0, { limit: 5 }).find((c) => c.name.toLowerCase() === name0) ?? null;
   });
   const [consent, setConsent] = useState(data.profile.marketingConsent);
+  // Os dados guardados chegam depois do primeiro desenho: preenche uma vez quando ficam prontos.
+  const filled = useRef(false);
+  useEffect(() => {
+    if (!ready || filled.current) return;
+    filled.current = true;
+    setName((v) => v || data.profile.name);
+    setWhatsapp((v) => v || maskWhatsapp(data.profile.whatsapp));
+    setEmail((v) => v || data.profile.email);
+    const nome = data.idea.municipality || data.profile.homeCity;
+    if (nome) {
+      setCity(nome);
+      const byCode = findCity(data.idea.municipalityCode);
+      setPicked(byCode ?? searchCities(nome, { limit: 5 }).find((c) => c.name.toLowerCase() === nome.toLowerCase()) ?? null);
+    }
+    setConsent((v) => v || data.profile.marketingConsent);
+  }, [ready]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const [code, setCode] = useState("");
   const [touched, setTouched] = useState(false);
   const [busy, setBusy] = useState(false);
