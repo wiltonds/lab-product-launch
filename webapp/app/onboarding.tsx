@@ -5,6 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Body, Button, Chip, Choice, Heading, OptionTile, Page, ProgressBar, Stepper, palette, numStyle } from "@/components/lab-ui";
 import { useAppData } from "@/hooks/use-app-data";
 import { BUSINESS_CATEGORIES } from "@/shared/catalog";
+import { moldeDe } from "@/shared/moldes";
 import { formatMoney } from "@/shared/format";
 import { validateName } from "@/shared/validation";
 import { citiesOf, norm, searchCities, stateName, STATES, type City } from "@/shared/cities";
@@ -26,7 +27,7 @@ const STAGE = [
 ];
 const EXPERIENCE = ["Sim, mais de 2 anos", "Sim, um pouco", "Nunca trabalhei nisso"];
 const INVEST = [
-  { label: "Até R$ 10 mil", value: 10000 }, { label: "Até R$ 30 mil", value: 30000 }, { label: "Até R$ 60 mil", value: 60000 },
+  { label: "Até R$ 1 mil", value: 1000 }, { label: "Até R$ 3 mil", value: 3000 }, { label: "Até R$ 10 mil", value: 10000 }, { label: "Até R$ 30 mil", value: 30000 }, { label: "Até R$ 60 mil", value: 60000 },
   { label: "Até R$ 100 mil", value: 100000 }, { label: "Mais de R$ 100 mil", value: 100001 },
 ];
 const RENT = [
@@ -148,7 +149,12 @@ export default function OnboardingScreen() {
         <Body>Escolha o mais parecido com a sua ideia.</Body>
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
           {ACTIVITIES.map((a, i) => <OptionTile key={a.id} label={a.label} icon={a.icon} color={i} selected={data.idea.activity === a.label}
-            onPress={() => { void update({ idea: { ...data.idea, category: a.category, activity: a.label } }); advance(); }} />)}
+            onPress={() => {
+              // Números de partida do ramo (molde), não os mesmos para todo negócio.
+              const m = moldeDe(a.id);
+              const finance = m ? { ...data.finance, averageTicket: m.ticket, customersPerDay: m.vendasDia, operatingDays: m.diasMes, variableCostPercent: m.custoVariavel, initialInvestment: m.investimento.ponto || m.investimento.casa } : data.finance;
+              void update({ idea: { ...data.idea, category: a.category, activity: a.label }, finance }); advance();
+            }} />)}
         </View>
         <Text style={{ color: palette.faint, fontSize: 13, textAlign: "center" }}>Mais tipos de negócio em breve.</Text>
       </> : null}
@@ -229,7 +235,12 @@ export default function OnboardingScreen() {
         <Heading>E o aluguel do ponto?</Heading>
         <Body>Se ainda não sabe, escolha o mais próximo. Dá para mudar depois.</Body>
         <View style={{ gap: 10 }}>{RENT.map((o) => <Choice key={o.label} label={o.label} selected={data.finance.rent === o.value}
-          onPress={() => { void update({ finance: { ...data.finance, rent: o.value } }); advance(); }} />)}</View>
+          onPress={() => {
+            const m = moldeDe(ACTIVITIES.find((x) => x.label === data.idea.activity)?.id);
+            const emCasa = o.value === 0 && (m?.podeEmCasa ?? true);
+            const inv = m ? (emCasa ? m.investimento.casa : m.investimento.ponto) : data.finance.initialInvestment;
+            void update({ finance: { ...data.finance, rent: o.value, initialInvestment: inv } }); advance();
+          }} />)}</View>
       </> : null}
 
       {step === 9 ? <>
