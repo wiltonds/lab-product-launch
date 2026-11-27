@@ -21,6 +21,7 @@ export type InsightSignal = {
   confidence: Confidence;
   source: string;           // ex.: "Receita Federal — CNPJ, out/2026"
   sampleSize?: number;      // n de empresas usadas; < 30 exige aviso
+  nearby?: string[];        // sinal do bairro: bairros da cidade com menos concorrência no ramo
 };
 
 export type MunicipalInsights = {

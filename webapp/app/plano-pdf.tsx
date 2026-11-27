@@ -5,7 +5,6 @@ import { palette } from "@/components/lab-ui";
 import { useAppData } from "@/hooks/use-app-data";
 import { useMunicipalInsights } from "@/hooks/use-municipal-insights";
 import { activityIdOf, alavancasIniciais, brl, gerarPlano, num1, type Item } from "@/shared/plano";
-import { planoSessao } from "@/shared/plano-sessao";
 
 /**
  * Plano completo para imprimir ou salvar em PDF, no padrão do Sebrae:
@@ -17,7 +16,7 @@ export default function PlanoPdfScreen() {
   const { data, ready } = useAppData();
   const insights = useMunicipalInsights(data.idea.outsideState ? "" : data.idea.municipalityCode, activityIdOf(data) ?? "", data.idea.neighborhood ?? "");
   const ins = insights.status === "ready" ? insights.data : null;
-  const plano = useMemo(() => ready ? gerarPlano(data, ins, planoSessao.get() ?? alavancasIniciais(data)) : null, [ready, data, ins]);
+  const plano = useMemo(() => ready ? gerarPlano(data, ins, alavancasIniciais(data)) : null, [ready, data, ins]);
 
   useEffect(() => {
     if (Platform.OS !== "web" || typeof document === "undefined") return;
@@ -54,7 +53,8 @@ export default function PlanoPdfScreen() {
 
       <Secao n={2} titulo="Análise de mercado">
         {plano.mercado ? plano.mercado.sinais.map((s, i) => <Tab key={i} a={`${s.titulo}: ${s.manchete}`} b={s.comparacao ?? ""} />) : <P>Dados da cidade indisponíveis no momento da geração.</P>}
-        {plano.mercado?.menosDisputadas.length ? <P>{`Cidades próximas menos disputadas: ${plano.mercado.menosDisputadas.join(", ")}.`}</P> : null}
+        {plano.mercado?.bairrosMenosDisputados.length ? <P>{`Bairros de ${plano.cidade} com menos concorrência no ramo: ${plano.mercado.bairrosMenosDisputados.join(", ")}.`}</P> : null}
+        {!plano.emCasa && plano.mercado?.menosDisputadas.length ? <P>{`Cidades do estado com menos concorrência no ramo: ${plano.mercado.menosDisputadas.join(", ")}.`}</P> : null}
       </Secao>
 
       <Secao n={3} titulo="Plano de marketing e modelo de negócio">

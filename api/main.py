@@ -115,6 +115,48 @@ def _compactar(t: pd.DataFrame) -> pd.DataFrame:
     return t.set_index("cod_ibge").sort_index(kind="stable")
 
 
+# Palavras com acento que aparecem em nomes de bairro e quase nunca em nome de cidade.
+ACENTOS_EXTRA = {
+    "BRASILIA": "Brasília", "CANAFISTULA": "Canafístula", "CANAA": "Canaã", "JATIUCA": "Jatiúca", "PAJUCARA": "Pajuçara",
+    "PONTAL": "Pontal", "JARDIM": "Jardim", "VERGEL": "Vergel", "FAROL": "Farol", "PITANGUINHA": "Pitanguinha",
+    "JACINTINHO": "Jacintinho", "CIDADE": "Cidade", "UNIVERSITARIA": "Universitária", "INDUSTRIAL": "Industrial",
+    "CONJUNTO": "Conjunto", "RESIDENCIAL": "Residencial", "VILA": "Vila", "PRACA": "Praça", "ESTACAO": "Estação",
+    "SITIO": "Sítio", "GUARANI": "Guarani", "ZELIA": "Zélia", "JOSE": "José", "JOAO": "João", "ANTONIO": "Antônio",
+    "SEBASTIAO": "Sebastião", "CONCEICAO": "Conceição", "VITORIA": "Vitória", "UNIAO": "União", "SAO": "São",
+    "PRIMAVERA": "Primavera", "PLANALTO": "Planalto", "BAIXAO": "Baixão", "CACIMBAS": "Cacimbas", "ITAPOA": "Itapoã",
+    "AEROPORTO": "Aeroporto", "AGUA": "Água", "AGUAS": "Águas", "ALIANCA": "Aliança", "ESPERANCA": "Esperança",
+    "PEDRAO": "Pedrão", "BOM": "Bom", "VISTA": "Vista", "SAUDE": "Saúde", "ITABORAI": "Itaboraí", "ITAJUBA": "Itajubá",
+}
+
+
+def mapa_de_acentos(nomes) -> dict[str, str]:
+    """Palavra sem acento → com acento, aprendida dos nomes oficiais de cidade do IBGE (que vêm acentuados).
+    Só entra quando a forma com acento é a mais comum, para não acentuar palavra que existe dos dois jeitos."""
+    from collections import Counter
+    formas: dict[str, Counter] = {}
+    for nome in nomes:
+        for w in str(nome).split():
+            if len(w) < 3:
+                continue
+            formas.setdefault(normalizar_nome(w), Counter())[w] += 1
+    mapa = {}
+    for chave, c in formas.items():
+        forma, n = c.most_common(1)[0]
+        if normalizar_nome(forma) != forma.upper() or forma != forma.title():
+            mapa[chave] = forma
+    return {**mapa, **ACENTOS_EXTRA}
+
+
+def acentuar(d: dict, nome: str) -> str:
+    """Devolve o nome do bairro com acentos, palavra a palavra (a Receita grava sem acento)."""
+    mapa = d.get("acentos") or {}
+    out = []
+    for w in str(nome).split():
+        a = mapa.get(normalizar_nome(w))
+        out.append(a if a and len(w) >= 3 else w)
+    return " ".join(out)
+
+
 def preparar(d: dict) -> dict:
     """Índices em memória: por município, por UF e a matriz de covariáveis do modelo."""
     mun = d["municipios"].copy()
@@ -122,6 +164,7 @@ def preparar(d: dict) -> dict:
     d["municipios"] = mun.set_index("cod_ibge")
     d["busca"] = mun.assign(chave=mun["municipio"].map(normalizar_nome))[["cod_ibge", "municipio", "uf", "chave", "populacao"]]
     d["X"] = matriz(mun).set_index("cod_ibge")
+    d["acentos"] = mapa_de_acentos(mun["municipio"])
     d["pop_uf"] = mun.groupby("uf")["populacao"].sum()
     for k in ("ativos", "movimento", "sobrevivencia"):
         d[k] = _compactar(d[k])
@@ -375,12 +418,13 @@ def bairro_sinal(d, ativ, mun, bairro: str) -> dict | None:
     if linha.empty:
         return None
     nome, empresas = linha.iloc[0]["bairro"], int(linha.iloc[0]["empresas"])
+    exibe = acentuar(d, nome)
     r = d["bairros"]
     r = r.loc[[int(mun["codigo"])]] if r is not None and int(mun["codigo"]) in r.index else None
     ramo = r[r["cnae_principal"].isin(ativ["_cnaes"])].astype({"bairro": str}) if r is not None else None
     por_bairro = ramo.groupby("bairro")["ativos"].sum() if ramo is not None else pd.Series(dtype=int)
     aqui = int(por_bairro.get(nome, 0))
-    base = {"id": "bairro", "title": f"No bairro {nome}", "confidence": "OBSERVADO", "sampleSize": empresas, "source": _fonte(d, "cnpj")}
+    base = {"id": "bairro", "title": f"No bairro {exibe}", "confidence": "OBSERVADO", "sampleSize": empresas, "source": _fonte(d, "cnpj")}
     if empresas < 30:
         return base | {"verdict": "neutro", "headline": f"{_num(aqui)} {ativ['plural']} no bairro",
                        "detail": "O bairro tem poucas empresas registradas para comparar com o resto da cidade."}
@@ -389,13 +433,14 @@ def bairro_sinal(d, ativ, mun, bairro: str) -> dict | None:
     v = "neutro" if taxa_cid == 0 else "favoravel" if taxa <= taxa_cid * 0.7 else "atencao" if taxa >= taxa_cid * 1.4 else "neutro"
     grandes = tot[tot["empresas"] >= 50].set_index("bairro")["empresas"]
     dens = (por_bairro.reindex(grandes.index, fill_value=0) / grandes * 100).sort_values()
-    menos = [b for b in dens.index if b != nome][:3]
+    menos = [acentuar(d, b) for b in dens.index if b != nome][:3]
     detalhe = {"favoravel": "Menos concorrência no bairro do que no resto da cidade, para o tanto de comércio que ele tem.",
                "atencao": "Mais concorrência no bairro do que no resto da cidade, para o tanto de comércio que ele tem.",
                "neutro": "Concorrência no bairro parecida com a do resto da cidade."}[v]
     return base | {"verdict": v, "headline": f"{_num(aqui)} {ativ['plural']} entre {_num(empresas)} empresas do bairro",
                    "detail": detalhe + (f" Bairros com menos concorrência: {', '.join(menos)}." if menos else ""),
-                   "comparison": f"No bairro: {taxa:.1f} a cada 100 empresas. Na cidade: {taxa_cid:.1f}".replace(".", ",")}
+                   "comparison": f"No bairro: {taxa:.1f} a cada 100 empresas. Na cidade: {taxa_cid:.1f}".replace(".", ","),
+                   "nearby": menos}
 
 
 def _municipio(d: dict, codigo: str) -> dict:
@@ -447,7 +492,7 @@ def bairros(municipio: str = Query(..., min_length=7, max_length=7), busca: str 
     if busca.strip():
         q = normalizar_nome(busca)
         t = t[t["bairro"].map(normalizar_nome).str.contains(q, regex=False)]
-    return [{"nome": r.bairro, "empresas": int(r.empresas)} for r in t.head(limite).itertuples()]
+    return [{"nome": acentuar(d, r.bairro), "empresas": int(r.empresas)} for r in t.head(limite).itertuples()]
 
 
 LIMITACOES = [

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { ScrollView, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -6,16 +6,15 @@ import { Body, Button, Card, Eyebrow, Heading, LinkButton, Page, Stepper, palett
 import { useAppData } from "@/hooks/use-app-data";
 import { useMunicipalInsights } from "@/hooks/use-municipal-insights";
 import { activityIdOf, alavancasIniciais, brl, gerarPlano, num1, type Alavancas, type Item } from "@/shared/plano";
-import { planoSessao } from "@/shared/plano-sessao";
 
 /** Plano de negócio vivo: a pessoa mexe nos números e vê o plano mudar. */
 export default function PlanoScreen() {
   const router = useRouter();
-  const { data, ready } = useAppData();
+  const { data, ready, update } = useAppData();
   const insights = useMunicipalInsights(data.idea.outsideState ? "" : data.idea.municipalityCode, activityIdOf(data) ?? "", data.idea.neighborhood ?? "");
-  const [alav, setAlav] = useState<Alavancas | null>(planoSessao.get());
-  useEffect(() => { if (ready && !alav) setAlav(alavancasIniciais(data)); }, [ready]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { planoSessao.set(alav); }, [alav]);
+  // Os ajustes ficam guardados (data.plano): o início, o PDF e a próxima visita usam os mesmos números.
+  const alav = ready ? alavancasIniciais(data) : null;
+  const setAlav = (a: Alavancas | null) => void update({ plano: a ?? undefined });
 
   const ins = insights.status === "ready" ? insights.data : null;
   const plano = useMemo(() => alav ? gerarPlano(data, ins, alav) : null, [data, ins, alav]);
@@ -68,7 +67,7 @@ export default function PlanoScreen() {
         <Stepper label="Aluguel" hint="0 = em casa" value={alav.aluguel} step={100} format={brl} onChange={set("aluguel")} />
         <Stepper label="Sua retirada" hint="quanto você quer tirar por mês" value={alav.retirada} step={100} format={brl} onChange={set("retirada")} />
         <Stepper label="Para abrir" hint="equipamento, curso, reforma" value={alav.investimento} step={500} format={brl} onChange={set("investimento")} />
-        <LinkButton title="Voltar aos números de partida" onPress={() => setAlav(alavancasIniciais(data))} />
+        <LinkButton title="Voltar aos números de partida" onPress={() => setAlav(null)} />
       </Card>
 
       <Card style={{ gap: 10 }}>

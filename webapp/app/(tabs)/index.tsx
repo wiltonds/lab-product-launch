@@ -8,7 +8,8 @@ import { useAppData } from "@/hooks/use-app-data";
 import { useAuth } from "@/hooks/use-auth";
 import { useMunicipalInsights } from "@/hooks/use-municipal-insights";
 import { activityIcon, findActivity } from "@/shared/catalog";
-import { calculateScenario, MISSIONS } from "@/shared/finance";
+import { MISSIONS } from "@/shared/finance";
+import { alavancasIniciais, gerarPlano, num1 } from "@/shared/plano";
 import { computeIndice } from "@/shared/indice";
 import { formatMoney } from "@/shared/format";
 import { PLANNED_SIGNALS, SMALL_SAMPLE_THRESHOLD, type InsightSignal } from "@/shared/insights";
@@ -45,7 +46,6 @@ function Welcome() {
   </View>;
 }
 
-const LOCKED = ["E se você vender menos que o previsto?", "Quanto tempo o seu dinheiro aguenta", "Como ganhar dos concorrentes da sua cidade", "Seu Plano B, passo a passo"];
 
 function SignalRow({ s }: { s: InsightSignal }) {
   const tone = { favoravel: ["checkmark-circle", palette.green], atencao: ["alert-circle", palette.amber], risco: ["close-circle", palette.red], neutro: ["ellipse-outline", palette.muted] }[s.verdict] as [keyof typeof Ionicons.glyphMap, string];
@@ -69,20 +69,24 @@ export default function HomeScreen() {
   const insights = useMunicipalInsights(data.idea.outsideState ? "" : data.idea.municipalityCode, activity?.id ?? "", data.idea.neighborhood ?? "");
   if (!data.idea.activity) return <Welcome />;
 
-  const f = data.finance;
-  const r = calculateScenario(f, "intermediario");
-  const need = r.breakEvenCustomersPerDay === null ? null : Math.ceil(r.breakEvenCustomersPerDay);
-  const positive = r.operatingResult >= 0;
-  const gap = need === null ? null : Math.round((f.customersPerDay - need) * 10) / 10;
+  // Uma conta só: tudo nesta tela vem do mesmo motor do plano (com os ajustes que a pessoa fez no painel).
+  const plano = gerarPlano(data, insights.status === "ready" ? insights.data : null, alavancasIniciais(data));
+  const a = plano.alavancas, res = plano.resumo;
+  const un = plano.molde?.unidadePlural ?? "clientes";
+  const provavel = plano.cenarios.find((c) => c.id === "provavel")!;
+  const need = Number.isFinite(res.vendasDiaParaRetirada) ? res.vendasDiaParaRetirada : null;
+  const positive = provavel.resultadoMes >= 0;
+  const gap = need === null ? null : Math.round((a.vendasDia - need) * 10) / 10;
+  const noLimite = gap !== null && gap >= 0 && gap < 0.5;
   const name = (data.profile.name || user?.name || "").split(" ")[0];
   const place = data.idea.outsideState ? data.idea.outsideState : data.idea.municipality;
 
   const months = data.profile.personalMonthly > 0 ? data.profile.reserve / data.profile.personalMonthly : null;
   const atLeast = data.profile.reserve > 30000 ? "mais de " : "";
-  const capitalNeeded = f.initialInvestment + r.workingCapital;
+  const capitalNeeded = res.paraComecar;
   const investableLabel = data.profile.investable > 100000 ? "mais de R$ 100 mil" : formatMoney(data.profile.investable);
   const capitalOk = data.profile.investable >= capitalNeeded;
-  const indice = computeIndice(data, insights.status === "ready" ? insights.data.marketScore ?? null : null);
+  const indice = computeIndice(data, insights.status === "ready" ? insights.data.marketScore ?? null : null, plano);
   const opp = insights.status === "ready" ? insights.data.opportunities : undefined;
   const pending = MISSIONS.filter((m) => !data.completedMissions.includes(m.id));
   const progress = Math.round((data.completedMissions.length / MISSIONS.length) * 100);
@@ -125,37 +129,36 @@ export default function HomeScreen() {
       </View>
       <View style={{ gap: 2 }}>
         <Text style={{ color: "#AEB9CF", fontSize: 14 }}>Sobra por mês, depois de pagar tudo e a sua retirada</Text>
-        <Text style={{ color: positive ? palette.lime : "#FFB4A8", fontSize: 44, fontWeight: "800", letterSpacing: -1.5, ...numStyle }}>{formatMoney(r.operatingResult)}</Text>
-        <Text style={{ color: "#C9D2E3", fontSize: 14, ...numStyle }}>{formatMoney(r.revenue)} em vendas · {f.customersPerDay} clientes/dia a {formatMoney(f.averageTicket)}</Text>
+        <Text style={{ color: positive ? palette.lime : "#FFB4A8", fontSize: 44, fontWeight: "800", letterSpacing: -1.5, ...numStyle }}>{formatMoney(provavel.resultadoMes)}</Text>
+        <Text style={{ color: "#C9D2E3", fontSize: 14, ...numStyle }}>{formatMoney(provavel.vendasMes)} em vendas · {num1(a.vendasDia)} {un}/dia a {formatMoney(a.preco)}{plano.emCasa ? " · em casa" : ""}</Text>
       </View>
-      <Pressable onPress={() => router.push("/(tabs)/simulator")} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: "rgba(255,255,255,0.1)", borderRadius: 16, paddingHorizontal: 16, paddingVertical: 13 }}>
-        <Text style={{ color: palette.white, fontWeight: "700" }}>Mexer nos números</Text><Ionicons name="options-outline" size={18} color={palette.white} />
-      </Pressable>
       <Pressable onPress={() => router.push("/plano")} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: palette.lime, borderRadius: 16, paddingHorizontal: 16, paddingVertical: 13 }}>
-        <Text style={{ color: palette.brandDeep, fontWeight: "800" }}>Ver meu plano de negócio</Text><Ionicons name="document-text-outline" size={18} color={palette.brandDeep} />
+        <Text style={{ color: palette.brandDeep, fontWeight: "800" }}>Ver meu plano e mexer nos números</Text><Ionicons name="document-text-outline" size={18} color={palette.brandDeep} />
       </Pressable>
     </View>
 
     {/* Ponto de equilíbrio */}
     <Card>
-      <SectionTitle title="Quantos clientes você precisa" subtitle={`Para pagar aluguel, contas, custos e a sua retirada de ${formatMoney(f.ownerPay)}.`} />
+      <SectionTitle title={`Quantos ${un} você precisa`} subtitle={`Para pagar ${a.aluguel > 0 ? "aluguel, " : ""}contas, material e a sua retirada de ${formatMoney(a.retirada)}.`} />
       {need === null ? <Body>Informe um ticket médio maior que o custo variável para calcular.</Body> : <>
         <View style={{ flexDirection: "row", gap: 12 }}>
           <View style={{ flex: 1, backgroundColor: palette.paper, borderRadius: 18, padding: 14, gap: 2 }}>
             <Text style={{ color: palette.muted, fontSize: 13 }}>Precisa de</Text>
-            <Text style={{ color: palette.ink, fontSize: 30, fontWeight: "800", ...numStyle }}>{need}<Text style={{ fontSize: 15, color: palette.muted }}> /dia</Text></Text>
+            <Text style={{ color: palette.ink, fontSize: 30, fontWeight: "800", ...numStyle }}>{num1(need)}<Text style={{ fontSize: 15, color: palette.muted }}> /dia</Text></Text>
           </View>
           <View style={{ flex: 1, backgroundColor: positive ? palette.greenSoft : palette.redSoft, borderRadius: 18, padding: 14, gap: 2 }}>
             <Text style={{ color: positive ? palette.green : palette.red, fontSize: 13 }}>Você espera</Text>
-            <Text style={{ color: positive ? palette.green : palette.red, fontSize: 30, fontWeight: "800", ...numStyle }}>{f.customersPerDay}<Text style={{ fontSize: 15 }}> /dia</Text></Text>
+            <Text style={{ color: positive ? palette.green : palette.red, fontSize: 30, fontWeight: "800", ...numStyle }}>{num1(a.vendasDia)}<Text style={{ fontSize: 15 }}> /dia</Text></Text>
           </View>
         </View>
-        <ProgressBar value={(f.customersPerDay / Math.max(need, f.customersPerDay, 1)) * 100} color={positive ? palette.green : palette.red} height={10} />
+        <ProgressBar value={(a.vendasDia / Math.max(need, a.vendasDia, 1)) * 100} color={positive ? palette.green : palette.red} height={10} />
         <View style={{ flexDirection: "row", gap: 10, alignItems: "flex-start" }}>
-          <Ionicons name={positive ? "checkmark-circle" : "alert-circle"} size={20} color={positive ? palette.green : palette.red} />
-          <Text style={{ color: palette.ink, flex: 1, fontSize: 15, lineHeight: 21 }}>{gap !== null && gap >= 0
-            ? `Folga de ${gap} cliente${gap === 1 ? "" : "s"} por dia. Seu próximo passo é confirmar se esse movimento é real.`
-            : `Faltam ${Math.abs(gap ?? 0)} clientes por dia. Reveja preço, custos ou aluguel antes de investir.`}</Text>
+          <Ionicons name={gap !== null && gap >= 0.5 ? "checkmark-circle" : "alert-circle"} size={20} color={gap !== null && gap >= 0.5 ? palette.green : noLimite ? palette.amber : palette.red} />
+          <Text style={{ color: palette.ink, flex: 1, fontSize: 15, lineHeight: 21 }}>{gap !== null && gap >= 0.5
+            ? `Folga de ${num1(gap)} ${un} por dia. Seu próximo passo é confirmar se esse movimento é real.`
+            : noLimite
+              ? `No limite: o que você espera mal cobre o necessário. Qualquer dia fraco já aperta; teste o movimento antes de investir.`
+              : `Faltam ${num1(Math.abs(gap ?? 0))} ${un} por dia. Mexa no preço, nos custos ou na retirada no seu plano.`}</Text>
         </View>
       </>}
     </Card>
@@ -166,7 +169,7 @@ export default function HomeScreen() {
         <IconBadge icon="wallet-outline" bg={capitalOk ? palette.greenSoft : palette.amberSoft} color={capitalOk ? palette.green : palette.amber} size={36} />
         <Text style={{ color: palette.muted, fontSize: 13 }}>Para abrir e aguentar 3 meses</Text>
         <Text style={{ color: palette.ink, fontSize: 20, fontWeight: "800", ...numStyle }}>{formatMoney(capitalNeeded)}</Text>
-        <Text style={{ color: capitalOk ? palette.green : palette.amber, fontSize: 13, fontWeight: "600" }}>Você tem {investableLabel}</Text>
+        <Text style={{ color: capitalOk ? palette.green : palette.amber, fontSize: 13, fontWeight: "600" }}>Você tem {investableLabel}{plano.emCasa ? " · começando em casa" : ""}</Text>
       </Card>
       <Card style={{ flex: 1, padding: 16, gap: 8 }}>
         <IconBadge icon="shield-checkmark-outline" bg={months !== null && months >= 6 ? palette.greenSoft : palette.amberSoft} color={months !== null && months >= 6 ? palette.green : palette.amber} size={36} />
@@ -215,7 +218,7 @@ export default function HomeScreen() {
 
     {/* Próximos passos */}
     <Card>
-      <SectionTitle title="Seu plano de ação" subtitle={`${data.completedMissions.length} de ${MISSIONS.length} passos feitos`} right={<Text style={{ color: palette.brand, fontWeight: "800", fontSize: 18, ...numStyle }}>{progress}%</Text>} />
+      <SectionTitle title="Próximos passos" subtitle={`${data.completedMissions.length} de ${MISSIONS.length} passos feitos`} right={<Text style={{ color: palette.brand, fontWeight: "800", fontSize: 18, ...numStyle }}>{progress}%</Text>} />
       <ProgressBar value={progress} />
       {pending.slice(0, 3).map((m, i) => <Pressable key={m.id} onPress={() => router.push("/(tabs)/missions")} style={{ flexDirection: "row", gap: 12, alignItems: "center", paddingVertical: 4 }}>
         <View style={{ width: 28, height: 28, borderRadius: 14, borderWidth: 1.5, borderColor: i === 0 ? palette.brand : palette.line, alignItems: "center", justifyContent: "center" }}><Text style={{ color: i === 0 ? palette.brand : palette.faint, fontWeight: "800", fontSize: 13 }}>{MISSIONS.indexOf(m) + 1}</Text></View>
@@ -231,33 +234,26 @@ export default function HomeScreen() {
     {/* Conta */}
     {!data.profile.verified ? <Pressable onPress={() => router.push("/cadastro")} style={{ backgroundColor: palette.brand, borderRadius: 26, padding: 20, flexDirection: "row", alignItems: "center", gap: 14 }}>
       <View style={{ width: 46, height: 46, borderRadius: 16, backgroundColor: "rgba(255,255,255,0.2)", alignItems: "center", justifyContent: "center" }}><Ionicons name="bookmark-outline" size={22} color={palette.white} /></View>
-      <View style={{ flex: 1, gap: 2 }}><Text style={{ color: palette.white, fontWeight: "800", fontSize: 16 }}>Salve sua análise</Text><Text style={{ color: "#FFE3D6", fontSize: 13 }}>Crie sua conta grátis e acesse de qualquer aparelho</Text></View>
+      <View style={{ flex: 1, gap: 2 }}><Text style={{ color: palette.white, fontWeight: "800", fontSize: 16 }}>Salve seu plano</Text><Text style={{ color: "#FFE3D6", fontSize: 13 }}>Crie sua conta grátis e veja seu plano em qualquer aparelho</Text></View>
       <Ionicons name="arrow-forward" size={20} color={palette.white} />
     </Pressable> : null}
 
-    {/* Riscos: 1 aberto, os outros com o olho fechado → página de compra */}
+    {/* Riscos abertos + plano completo grátis. Mentoria paga fica como convite, não como muro. */}
     <View style={{ backgroundColor: palette.navy, borderRadius: 30, padding: 22, gap: 14 }}>
       <Text style={{ color: palette.lime, fontWeight: "800", fontSize: 12, letterSpacing: 1 }}>ANTES DE COLOCAR SEU DINHEIRO</Text>
-      <Text style={{ color: palette.white, fontSize: 24, lineHeight: 30, fontWeight: "800" }}>{name ? `${name}, veja` : "Veja"} o que pode dar errado no seu plano.</Text>
-      <View style={{ backgroundColor: "rgba(255,255,255,0.10)", borderRadius: 18, padding: 14, flexDirection: "row", gap: 12, alignItems: "flex-start" }}>
-        <Ionicons name="eye" size={20} color={palette.lime} />
-        <View style={{ flex: 1, gap: 2 }}>
-          <Text style={{ color: palette.lime, fontWeight: "800", fontSize: 12 }}>SEU MAIOR RISCO</Text>
-          <Text style={{ color: palette.white, fontSize: 15, lineHeight: 22 }}>{indice.reason}</Text>
-        </View>
-      </View>
-      {LOCKED.map((t, i) => <Pressable key={t} accessibilityRole="button" accessibilityLabel={`${t}. Bloqueado. Ver no plano completo.`} onPress={() => router.push("/report")}
-        style={{ backgroundColor: "rgba(255,255,255,0.06)", borderRadius: 18, padding: 14, flexDirection: "row", gap: 12, alignItems: "center" }}>
-        <Ionicons name="eye-off" size={20} color="#AEB9CF" />
-        <View style={{ flex: 1, gap: 6 }}>
-          <Text style={{ color: palette.white, fontWeight: "700", fontSize: 15 }}>{t}</Text>
-          <View style={{ height: 8, borderRadius: 4, backgroundColor: "rgba(255,255,255,0.14)", width: `${70 - i * 12}%` }} />
-        </View>
-        <Ionicons name="lock-closed" size={16} color="#AEB9CF" />
-      </Pressable>)}
-      <Pressable accessibilityRole="button" onPress={() => router.push("/report")} style={({ pressed }) => ({ backgroundColor: palette.brand, borderRadius: 999, minHeight: 60, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8, transform: [{ scale: pressed ? 0.98 : 1 }] })}>
-        <Ionicons name="eye" size={20} color={palette.navy} /><Text style={{ color: palette.navy, fontWeight: "800", fontSize: 17 }}>Ver os riscos e abrir meu negócio</Text>
+      <Text style={{ color: palette.white, fontSize: 24, lineHeight: 30, fontWeight: "800" }}>{name ? `${name}, veja` : "Veja"} o que pode dar errado e o que fazer.</Text>
+      {[{ t: indice.reason, icone: "eye" as const, rotulo: "SEU MAIOR RISCO" }, ...plano.riscos.filter((x) => x.texto !== indice.reason).slice(0, 2).map((x) => ({ t: x.texto, icone: "alert-circle" as const, rotulo: "RISCO" })), ...plano.planoB.slice(0, 1).map((x) => ({ t: x.texto, icone: "git-branch-outline" as const, rotulo: "PLANO B" }))].map((x, i) =>
+        <View key={i} style={{ backgroundColor: "rgba(255,255,255,0.10)", borderRadius: 18, padding: 14, flexDirection: "row", gap: 12, alignItems: "flex-start" }}>
+          <Ionicons name={x.icone} size={20} color={palette.lime} />
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text style={{ color: palette.lime, fontWeight: "800", fontSize: 12 }}>{x.rotulo}</Text>
+            <Text style={{ color: palette.white, fontSize: 15, lineHeight: 22 }}>{x.t}</Text>
+          </View>
+        </View>)}
+      <Pressable accessibilityRole="button" onPress={() => router.push("/plano")} style={({ pressed }) => ({ backgroundColor: palette.brand, borderRadius: 999, minHeight: 60, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8, transform: [{ scale: pressed ? 0.98 : 1 }] })}>
+        <Ionicons name="document-text" size={20} color={palette.navy} /><Text style={{ color: palette.navy, fontWeight: "800", fontSize: 17 }}>Ver meu plano completo, grátis</Text>
       </Pressable>
+      <Text accessibilityRole="link" onPress={() => router.push("/report")} style={{ color: "#AEB9CF", fontSize: 14, textAlign: "center", textDecorationLine: "underline" }}>Quero alguém do meu lado para abrir</Text>
     </View>
 
     <View style={{ height: 24 }} />

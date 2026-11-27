@@ -81,6 +81,8 @@ export type AppData = {
   salesTests: { days: number; approached: number; interested: number; intendToBuy: number; bought: number; price: number; createdAt: string }[];
   mentorshipRequests: { date: string; time: string; status: "pendente"; createdAt: string }[];
   privacyRequests: { type: "export" | "deletion"; createdAt: string; status: "solicitada" }[];
+  /** Números que a pessoa ajustou no painel do plano. Sem isso, o plano usa os números de partida do ramo. */
+  plano?: import("./plano").Alavancas;
 };
 
 export const DEFAULT_APP_DATA: AppData = {

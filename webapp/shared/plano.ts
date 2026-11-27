@@ -47,7 +47,7 @@ export type Plano = {
   };
   meses: Mes[];
   cenarios: Cenario[];
-  mercado: { sinais: { titulo: string; manchete: string; detalhe?: string; comparacao?: string; tom: string; fonte: string }[]; menosDisputadas: string[]; limitacoes: string[] } | null;
+  mercado: { sinais: { titulo: string; manchete: string; detalhe?: string; comparacao?: string; tom: string; fonte: string }[]; menosDisputadas: string[]; bairrosMenosDisputados: string[]; limitacoes: string[] } | null;
   swot: { forcas: Item[]; fraquezas: Item[]; oportunidades: Item[]; ameacas: Item[] };
   riscos: Item[];
   planoB: Item[];
@@ -63,6 +63,11 @@ const CENARIOS = [
 
 /** Números de partida: o molde do ramo, ajustado às respostas (em casa ou ponto, preço e movimento que a pessoa disse). */
 export function alavancasIniciais(data: AppData): Alavancas {
+  return data.plano ?? alavancasDePartida(data);
+}
+
+/** Números de partida do ramo, ignorando ajustes do painel. */
+export function alavancasDePartida(data: AppData): Alavancas {
   const m = moldeDe(activityIdOf(data));
   const f = data.finance;
   const emCasa = f.rent === 0 && (m?.podeEmCasa ?? true);
@@ -70,12 +75,12 @@ export function alavancasIniciais(data: AppData): Alavancas {
   return {
     preco: respondeu || !m ? f.averageTicket : m.ticket,
     vendasDia: respondeu || !m ? f.customersPerDay : m.vendasDia,
-    diasMes: m?.diasMes ?? f.operatingDays,
+    diasMes: f.operatingDays || m?.diasMes || 22,   // a pessoa confirma os dias no cadastro
     custoVariavel: m?.custoVariavel ?? f.variableCostPercent,
     fixos: m ? (emCasa ? m.fixos.casa : m.fixos.ponto) : f.energy + f.water + f.internet,
     aluguel: emCasa ? 0 : f.rent,
     retirada: f.ownerPay,
-    investimento: m ? (emCasa ? m.investimento.casa : m.investimento.ponto) : f.initialInvestment,
+    investimento: m && f.initialInvestment === 30000 ? (emCasa ? m.investimento.casa : m.investimento.ponto) : f.initialInvestment, // 30 mil = padrão antigo
   };
 }
 
@@ -129,6 +134,7 @@ export function gerarPlano(data: AppData, insights: MunicipalInsights | null, al
   const mercado = insights ? {
     sinais: insights.signals.map((s) => ({ titulo: s.title, manchete: s.headline, detalhe: s.detail, comparacao: s.comparison, tom: s.verdict, fonte: s.source })),
     menosDisputadas: (insights.opportunities?.cities ?? []).slice(0, 3).map((c) => c.name),
+    bairrosMenosDisputados: bairrosMenosDisputados(insights),
     limitacoes: insights.limitations,
   } : null;
 
@@ -171,9 +177,17 @@ function montarSwot(data: AppData, insights: MunicipalInsights | null, a: Alavan
     if (s.verdict === "favoravel") oportunidades.push(it);
     else if (s.verdict === "risco" || s.verdict === "atencao") ameacas.push(it);
   }
+  // Onde há menos concorrência: para quem trabalha em casa, bairros da própria cidade; para ponto, também outras cidades do estado.
+  const vizinhos = bairrosMenosDisputados(insights);
+  if (vizinhos.length) oportunidades.push({ texto: `Bairros de ${data.idea.municipality} com menos concorrência: ${vizinhos.join(", ")}`, fonte: "Receita Federal (CNPJ)" });
   const cid = insights?.opportunities?.cities ?? [];
-  if (cid.length) oportunidades.push({ texto: `Cidades próximas menos disputadas: ${cid.slice(0, 3).map((c) => c.name).join(", ")}`, fonte: "Receita Federal (CNPJ) e IBGE" });
+  if (cid.length && a.aluguel > 0) oportunidades.push({ texto: `Cidades ${data.idea.municipalityUf ? `de ${data.idea.municipalityUf} ` : ""}com menos concorrência para o ramo: ${cid.slice(0, 3).map((c) => c.name).join(", ")}`, fonte: "Receita Federal (CNPJ) e IBGE" });
   return { forcas, fraquezas, oportunidades, ameacas };
+}
+
+/** Bairros da cidade com menos concorrência no ramo (vem do sinal do bairro, quando a pessoa escolheu um). */
+export function bairrosMenosDisputados(insights: MunicipalInsights | null): string[] {
+  return (insights?.signals.find((s) => s.id === "bairro")?.nearby ?? []).slice(0, 3);
 }
 
 function montarRiscos(data: AppData, insights: MunicipalInsights | null, a: Alavancas, r: Plano["resumo"], m: Molde | null): { riscos: Item[]; planoB: Item[] } {
@@ -188,7 +202,10 @@ function montarRiscos(data: AppData, insights: MunicipalInsights | null, a: Alav
   if (sob && sob.verdict === "risco") riscos.push({ texto: `Sobrevivência baixa no ramo: ${sob.headline}.`, fonte: sob.source });
   const meta = Math.max(1, Math.round(a.vendasDia * 0.5));
   planoB.push({ texto: `Teste de 2 semanas: se vier menos de ${meta} ${un} por dia, mude uma coisa só (preço, público ou bairro) e teste de novo.` });
-  if (insights?.opportunities?.cities?.length) planoB.push({ texto: `Se o seu bairro estiver saturado, atenda onde há menos concorrência: ${insights.opportunities.cities.slice(0, 2).map((c) => c.name).join(" ou ")}.` });
+  const vizinhos = bairrosMenosDisputados(insights);
+  if (a.aluguel === 0 && vizinhos.length) planoB.push({ texto: `Divulgue e atenda também nos bairros com menos concorrência: ${vizinhos.join(", ")}.` });
+  if (a.aluguel > 0 && vizinhos.length) planoB.push({ texto: `Antes de assinar o aluguel, compare pontos nos bairros com menos concorrência: ${vizinhos.join(", ")}.` });
+  if (a.aluguel > 0 && !vizinhos.length && insights?.opportunities?.cities?.length) planoB.push({ texto: `Se a cidade estiver disputada, compare com cidades do estado com menos concorrência: ${insights.opportunities.cities.slice(0, 2).map((c) => c.name).join(" ou ")}.` });
   if (a.aluguel > 0 && m?.podeEmCasa) planoB.push({ texto: "Comece em casa ou a domicílio e só alugue o ponto quando a agenda lotar." });
   return { riscos, planoB };
 }

@@ -8,10 +8,10 @@ import { useAppData } from "@/hooks/use-app-data";
 import { palette } from "@/components/lab-ui";
 
 const WIDE = 768;
-const NAV: { route: "/" | "/simulator" | "/missions"; name: string; title: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+const NAV: { route: "/" | "/plano" | "/missions"; name: string; title: string; icon: keyof typeof Ionicons.glyphMap }[] = [
   { route: "/", name: "index", title: "Análise", icon: "analytics-outline" },
-  { route: "/simulator", name: "simulator", title: "Simulador", icon: "calculator-outline" },
-  { route: "/missions", name: "missions", title: "Plano", icon: "checkmark-circle-outline" },
+  { route: "/plano", name: "simulator", title: "Meu plano", icon: "document-text-outline" },
+  { route: "/missions", name: "missions", title: "Próximos passos", icon: "checkmark-circle-outline" },
 ];
 
 /** Avatar do perfil: inicial do nome (laranja) ou ícone de pessoa para quem ainda não tem nome/conta. */
