@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Body, Button, Chip, Choice, Heading, OptionTile, Page, ProgressBar, Stepper, palette, numStyle } from "@/components/lab-ui";
@@ -55,6 +55,7 @@ export default function OnboardingScreen() {
 
   const first = (data.profile.name || name).trim().split(" ")[0];
   const cities = useMemo(() => (ufPick || query.trim() ? searchCities(query, { uf: ufPick || undefined, limit: ufPick ? 12 : 8 }) : []), [query, ufPick]);
+  const [loadingCity, setLoadingCity] = useState("");
   const go = (n: number) => { setError(""); setStep(n); };
   const advance = () => setTimeout(() => go(step + 1), 200);
   const setProfile = (patch: Partial<typeof data.profile>) => void update({ profile: { ...data.profile, ...patch } });
@@ -70,7 +71,14 @@ export default function OnboardingScreen() {
     void update({ idea: { ...data.idea, municipality: city.name, municipalityCode: city.code, municipalityUf: city.uf, neighborhood: "", outsideState: "" } });
     setQuery("");
     // Bairro é opcional: só pergunta se a cidade tiver bairros nos dados.
-    void fetchNeighborhoods(city.code).then((bs) => { if (bs.length >= 3) { setHoods(bs); setHoodCity(city); } else advance(); });
+    // Sem travar: se a API de dados demorar (servidor acordando), segue sem bairro.
+    setLoadingCity(city.code);
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 5000);
+    void fetchNeighborhoods(city.code, ctrl.signal).then((bs) => {
+      clearTimeout(timer); setLoadingCity("");
+      if (bs.length >= 3) { setHoods(bs); setHoodCity(city); } else advance();
+    });
   };
   const pickHood = (name: string) => {
     void update({ idea: { ...data.idea, neighborhood: name } });
@@ -172,7 +180,7 @@ export default function OnboardingScreen() {
           <TextInput value={query} onChangeText={setQuery} placeholder="Ou digite a cidade direto" placeholderTextColor={palette.faint} style={{ flex: 1, paddingVertical: 16, fontSize: 16, color: palette.ink }} accessibilityLabel="Buscar cidade em todo o Brasil" />
         </View>
         {query ? <>
-          {cities.map((c) => <CityRow key={c.code} city={c} onPress={() => pickCity(c)} showUf />)}
+          {cities.map((c) => <CityRow key={c.code} city={c} onPress={() => pickCity(c)} showUf loading={loadingCity === c.code} />)}
           {cities.length === 0 ? <Body>Nenhuma cidade com esse nome. Confira a grafia ou escolha o estado abaixo.</Body> : null}
         </> : null}
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
@@ -192,7 +200,7 @@ export default function OnboardingScreen() {
           <TextInput value={query} onChangeText={setQuery} autoFocus placeholder={`Buscar entre ${citiesOf(ufPick)} cidades`} placeholderTextColor={palette.faint} style={{ flex: 1, paddingVertical: 16, fontSize: 16, color: palette.ink }} accessibilityLabel={`Buscar cidade de ${stateName(ufPick)}`} />
         </View>
         {!query ? <Text style={{ color: palette.muted, fontWeight: "800", fontSize: 12, letterSpacing: 1 }}>MAIORES CIDADES</Text> : null}
-        {cities.map((c) => <CityRow key={c.code} city={c} onPress={() => pickCity(c)} />)}
+        {cities.map((c) => <CityRow key={c.code} city={c} onPress={() => pickCity(c)} loading={loadingCity === c.code} />)}
         {query && cities.length === 0 ? <Body>Nenhuma cidade {prepEstado(ufPick)} com esse nome. Confira a grafia.</Body> : null}
       </>) : null}
 
@@ -254,14 +262,14 @@ export default function OnboardingScreen() {
 /** "da Paraíba", "do Ceará", "de Alagoas", "de Minas Gerais". */
 function prepEstado(uf: string): string {
   const nome = stateName(uf);
-  const da = ["BA", "PB"], de = ["AL", "GO", "MG", "MT", "MS", "PE", "RO", "RR", "SC", "SE", "SP", "TO"];
+  const da = ["BA", "PB"], de = ["AL", "GO", "MG", "MT", "MS", "PE", "RO", "RR", "SC", "SE", "SP"];
   return (da.includes(uf) ? "da " : de.includes(uf) ? "de " : "do ") + nome;
 }
 
-function CityRow({ city, onPress, showUf = false }: { city: City; onPress: () => void; showUf?: boolean }) {
-  return <Pressable onPress={onPress} accessibilityRole="button" style={{ flexDirection: "row", alignItems: "center", gap: 12, minHeight: 52, paddingHorizontal: 6, borderBottomWidth: 1, borderBottomColor: palette.line }}>
+function CityRow({ city, onPress, showUf = false, loading = false }: { city: City; onPress: () => void; showUf?: boolean; loading?: boolean }) {
+  return <Pressable onPress={onPress} disabled={loading} accessibilityRole="button" style={{ flexDirection: "row", alignItems: "center", gap: 12, minHeight: 52, paddingHorizontal: 6, borderBottomWidth: 1, borderBottomColor: palette.line, backgroundColor: loading ? palette.brandSoft : "transparent" }}>
     <Ionicons name="location" size={18} color={palette.brandText} />
     <Text style={{ fontSize: 16, color: palette.ink, flex: 1 }}>{city.name}{showUf ? <Text style={{ color: palette.muted }}> · {city.uf}</Text> : null}</Text>
-    <Ionicons name="chevron-forward" size={16} color={palette.faint} />
+    {loading ? <ActivityIndicator size="small" color={palette.brand} /> : <Ionicons name="chevron-forward" size={16} color={palette.faint} />}
   </Pressable>;
 }
