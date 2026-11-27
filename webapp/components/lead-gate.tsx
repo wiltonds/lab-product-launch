@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -23,7 +23,7 @@ function Caixa({ marcada, onPress, children }: { marcada: boolean; onPress: () =
  */
 export function LeadGate({ indice, children }: { indice: number | null; children: ReactNode }) {
   const router = useRouter();
-  const { data, update } = useAppData();
+  const { data, update, ready } = useAppData();
   const [nome, setNome] = useState(data.profile.name);
   const [whatsapp, setWhatsapp] = useState(maskWhatsapp(data.profile.whatsapp));
   const [contato, setContato] = useState(false);
@@ -31,6 +31,16 @@ export function LeadGate({ indice, children }: { indice: number | null; children
   const [tentou, setTentou] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [erroServidor, setErroServidor] = useState("");
+  // Os dados salvos no aparelho chegam depois do primeiro desenho: preenche uma vez quando ficam prontos,
+  // sem apagar o que a pessoa já começou a digitar.
+  const preenchido = useRef(false);
+  useEffect(() => {
+    if (!ready || preenchido.current) return;
+    preenchido.current = true;
+    setNome((v) => v || data.profile.name);
+    setWhatsapp((v) => v || maskWhatsapp(data.profile.whatsapp));
+    setMarketing((v) => v || data.profile.marketingConsent);
+  }, [ready]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (data.lead || data.profile.verified) return <>{children}</>;
 
